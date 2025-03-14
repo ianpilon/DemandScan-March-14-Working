@@ -1,5 +1,18 @@
 # DemandScan Changelog
 
+## March 14, 2025 Analytics Implementation
+
+### Hotjar Analytics Integration
+
+- Added Hotjar analytics tracking code to the application
+- Implemented the tracking script in the `<head>` section of index.html
+- Updated Content Security Policy to allow Hotjar domains and resources
+- Enhanced user behavior tracking capabilities:
+  - Session recording for observing user navigation patterns
+  - Heatmaps showing where users click and scroll
+  - Conversion funnel tracking
+  - User feedback collection
+
 ## March 14, 2025 UI and Content Updates
 
 ### Navigation Panel Improvements
