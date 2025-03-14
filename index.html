@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: https://unpkg.com https://*.hotjar.com https://static.hj.contentsquare.net; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://unpkg.com blob: https://*.hotjar.com https://static.hj.contentsquare.net; worker-src blob: 'self' https://unpkg.com; connect-src https://unpkg.com https://api.openai.com https://*.sentry.io 'self' blob: https://*.hotjar.com https://*.contentsquare.net wss://*.hotjar.com; style-src 'self' 'unsafe-inline' https://*.hotjar.com; img-src 'self' data: https://*.hotjar.com; font-src 'self' https://*.hotjar.com; media-src blob: 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: https://unpkg.com https://us.i.posthog.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://unpkg.com blob: https://us.i.posthog.com; worker-src blob: 'self' https://unpkg.com; connect-src https://unpkg.com https://api.openai.com https://*.sentry.io 'self' blob: https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src blob: 'self';">
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script>
       window.onload = function() {
@@ -14,18 +14,7 @@
     <meta name="description" content="GPT Engineer Generated Project" />
     <meta name="author" content="GPT Engineer" />
     <meta property="og:image" content="/og-image.svg" />
-    <!-- Hotjar Tracking Code -->
-    <script>
-    (function (c, s, q, u, a, r, e) {
-        c.hj=c.hj||function(){(c.hj.q=c.hj.q||[]).push(arguments)};
-        c._hjSettings = { hjid: a };
-        r = s.getElementsByTagName('head')[0];
-        e = s.createElement('script');
-        e.async = true;
-        e.src = q + c._hjSettings.hjid + u;
-        r.appendChild(e);
-    })(window, document, 'https://static.hj.contentsquare.net/c/csq-', '.js', 5326387);
-    </script>
+
   </head>
   <body>
     <div id="root"></div>

@@ -3,16 +3,25 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import VerticalNavigation from "./components/VerticalNavigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CustomerProblemAnalyst from "./pages/CustomerProblemAnalyst";
 import ProblemHypothesis from "./pages/ProblemHypothesis";
 import FAQs from "./pages/FAQs";
 import Settings from "./pages/Settings";
+import { usePostHog } from 'posthog-js/react';
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [analysisResults, setAnalysisResults] = useState({});
+  const posthog = usePostHog();
+  
+  useEffect(() => {
+    // Capture page load event
+    posthog?.capture('app_loaded', {
+      timestamp: new Date().toISOString()
+    });
+  }, [posthog]);
 
   return (
     <QueryClientProvider client={queryClient}>
