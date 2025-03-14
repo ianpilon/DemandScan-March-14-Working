@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: https://unpkg.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://unpkg.com blob:; worker-src blob: 'self' https://unpkg.com; connect-src https://unpkg.com https://api.openai.com https://*.sentry.io 'self' blob:; style-src 'self' 'unsafe-inline'; media-src blob: 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: https://unpkg.com https://*.hotjar.com https://static.hj.contentsquare.net; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://unpkg.com blob: https://*.hotjar.com https://static.hj.contentsquare.net; worker-src blob: 'self' https://unpkg.com; connect-src https://unpkg.com https://api.openai.com https://*.sentry.io 'self' blob: https://*.hotjar.com https://*.contentsquare.net wss://*.hotjar.com; style-src 'self' 'unsafe-inline' https://*.hotjar.com; img-src 'self' data: https://*.hotjar.com; font-src 'self' https://*.hotjar.com; media-src blob: 'self';">
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script>
       window.onload = function() {
