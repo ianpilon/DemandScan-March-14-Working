@@ -34,6 +34,16 @@ Format your response in the following JSON structure:
   }
 }`;
 
+// Helper function to update progress with delay
+const updateProgress = async (progress, progressCallback, stepText) => {
+  console.log('Setting Final Report progress to:', progress, stepText ? `(${stepText})` : '');
+  if (progressCallback) {
+    progressCallback(progress, stepText);
+  }
+  // Add a small delay to make the progress updates smoother
+  await new Promise(resolve => setTimeout(resolve, 100));
+};
+
 export const generateFinalReport = async (allResults, progressCallback, apiKey) => {
   console.log('Starting Final Report generation with:', {
     hasResults: !!allResults,
@@ -55,7 +65,7 @@ export const generateFinalReport = async (allResults, progressCallback, apiKey) 
   try {
     // Start progress
     console.log('Setting initial progress');
-    progressCallback(10);
+    await updateProgress(10, progressCallback, "Initializing final report generation...");
 
     // Validate that we have some results to analyze
     if (!allResults || Object.keys(allResults).length === 0) {
@@ -75,14 +85,14 @@ export const generateFinalReport = async (allResults, progressCallback, apiKey) 
 
     // Update progress
     console.log('Setting progress after validation');
-    progressCallback(20);
+    await updateProgress(20, progressCallback, "Validating analysis results...");
 
     // First, get summaries of each analysis to reduce token count
     console.log('Getting summaries of each analysis');
     const summaryMessages = [
       {
         role: 'system',
-        content: 'You are a research analysis summarizer. Create very concise summaries of analysis results, focusing only on the most important findings. Keep summaries under 200 words.'
+        content: 'You are a research analysis summarizer. Create very concise summaries of analysis results as JSON, focusing only on the most important findings. Keep summaries under 200 words and format your response as a JSON object.'
       }
     ];
 
@@ -107,18 +117,19 @@ export const generateFinalReport = async (allResults, progressCallback, apiKey) 
       });
     }
 
-    progressCallback(30);
+    await updateProgress(30, progressCallback, "Preparing analysis summaries...");
     console.log('Getting summaries from OpenAI');
     
     const summaryResponse = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages: summaryMessages,
+      response_format: { type: "json_object" },
       temperature: 0.3,
       max_tokens: 1000
     });
 
     const summaries = summaryResponse.choices[0].message.content;
-    progressCallback(50);
+    await updateProgress(50, progressCallback, "Synthesizing analysis findings...");
 
     // Now generate the final report with the summaries
     console.log('Generating final report with summaries');
@@ -129,19 +140,20 @@ export const generateFinalReport = async (allResults, progressCallback, apiKey) 
       },
       {
         role: 'user',
-        content: `Please analyze these summarized research results and generate a comprehensive final report: ${summaries}`
+        content: `Please analyze these summarized research results and generate a comprehensive final report as a JSON object: ${summaries}`
       }
     ];
 
     console.log('Sending request to OpenAI for final report generation');
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages: finalReportMessages,
+      response_format: { type: "json_object" },
       temperature: 0.7,
       max_tokens: 2000
     });
 
-    progressCallback(80);
+    await updateProgress(80, progressCallback, "Finalizing executive summary...");
     console.log('Parsing OpenAI response');
 
     const finalReport = JSON.parse(response.choices[0].message.content);
@@ -151,7 +163,7 @@ export const generateFinalReport = async (allResults, progressCallback, apiKey) 
       throw new Error('Invalid final report structure');
     }
 
-    progressCallback(100);
+    await updateProgress(100, progressCallback, "Final report complete");
     console.log('Final report generation complete');
 
     return finalReport;

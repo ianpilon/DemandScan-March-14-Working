@@ -18,21 +18,25 @@ const AwarenessSection = ({ dimension, data }) => {
       
       <div className="space-y-4">
         <div>
-          <h5 className="text-sm font-medium mb-2">Strengths</h5>
-          <ul className="list-disc pl-5 space-y-1">
-            {data.strengths.map((strength, index) => (
-              <li key={index} className="text-sm text-muted-foreground">{strength}</li>
-            ))}
-          </ul>
+          <div className="bg-[#FAFBFD] p-3 rounded-md shadow-sm">
+            <h5 className="text-sm font-medium mb-2">Strengths</h5>
+            <ul className="list-disc pl-5 space-y-1">
+              {data.strengths.map((strength, index) => (
+                <li key={index} className="text-sm text-muted-foreground">{strength}</li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div>
-          <h5 className="text-sm font-medium mb-2">Weaknesses</h5>
-          <ul className="list-disc pl-5 space-y-1">
-            {data.weaknesses.map((weakness, index) => (
-              <li key={index} className="text-sm text-muted-foreground">{weakness}</li>
-            ))}
-          </ul>
+          <div className="bg-[#FAFBFD] p-3 rounded-md shadow-sm">
+            <h5 className="text-sm font-medium mb-2">Weaknesses</h5>
+            <ul className="list-disc pl-5 space-y-1">
+              {data.weaknesses.map((weakness, index) => (
+                <li key={index} className="text-sm text-muted-foreground">{weakness}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -68,12 +72,14 @@ const ProblemAwarenessResults = ({ result }) => {
                     </div>
                     <p className="text-muted-foreground mb-3">{item.analysis}</p>
                     <div className="space-y-2">
-                      <h5 className="text-sm font-medium">Evidence:</h5>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {item.evidence.map((evidence, i) => (
-                          <li key={i} className="text-sm text-muted-foreground">{evidence}</li>
-                        ))}
-                      </ul>
+                      <div className="evidence-section">
+                        <h5 className="text-sm font-medium mb-2">Evidence:</h5>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {item.evidence.map((evidence, i) => (
+                            <li key={i} className="text-sm text-muted-foreground">{evidence}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 ))}

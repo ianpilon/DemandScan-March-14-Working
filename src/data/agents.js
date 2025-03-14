@@ -20,17 +20,24 @@ export const agents = [
   },
   {
     id: 'painExtractor',
-    name: "Pain and Friction Analysis",
-    description: "Analyzes transcripts to identify, categorize, and prioritize customer pain points with supporting evidence.",
+    name: "Customer Pain Points Analysis",
+    description: "Identifies and categorizes top customer pain points with severity ratings using the CURSE framework.",
     icon: '🔍',
     requiresPreviousAgent: 'jtbdGains'
   },
   {
+    id: 'frictionAnalysis',
+    name: "Friction Points Analysis",
+    description: "Analyzes friction points preventing customer progress with actionable recommendations to overcome blockers.",
+    icon: '🚧',
+    requiresPreviousAgent: 'painExtractor'
+  },
+  {
     id: 'problemAwareness',
     name: "Problem Awareness Level",
-    description: "Analyzes the interviewee's level of awareness regarding problems and their implications, creating a matrix of problem understanding and potential solutions.",
+    description: "Analyzes the interviewee's level of awareness regarding problems and their implications, creating a matrix of problem understanding.",
     icon: '🎯',
-    requiresPreviousAgent: 'painExtractor'
+    requiresPreviousAgent: 'frictionAnalysis'
   },
   {
     id: 'needsAnalysis',

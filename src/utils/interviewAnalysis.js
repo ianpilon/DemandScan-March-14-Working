@@ -92,7 +92,7 @@ Please provide your analysis in the following JSON format:
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -105,6 +105,7 @@ Please provide your analysis in the following JSON format:
       ],
       temperature: 0.7,
       max_tokens: 2000,
+      response_format: { type: "json_object" }
     });
 
     return JSON.parse(response.choices[0].message.content);

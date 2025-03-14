@@ -166,16 +166,17 @@ ${chunkingResults.finalSummary}`
     console.log('✅ DEBUG - Messages prepared for OpenAI');
 
     console.log('🚀 DEBUG - Sending request to OpenAI:', {
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messageCount: messages.length,
       contentLength: messages[1].content.length
     });
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages,
       temperature: 0.7,
-      max_tokens: 2500
+      max_tokens: 2500,
+      response_format: { type: "json_object" }
     });
 
     if (progressCallback) progressCallback(80);

@@ -14,7 +14,7 @@ const updateProgress = async (progress, progressCallback) => {
 const analyzeWithContext = async (openai, chunk, chunkSummary, sectionSummary, finalSummary) => {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -67,7 +67,7 @@ const analyzeWithContext = async (openai, chunk, chunkSummary, sectionSummary, f
 const combineAnalyses = async (openai, analyses, finalSummary) => {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

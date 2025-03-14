@@ -112,10 +112,11 @@ export const analyzeNeeds = async (analysisData, progressCallback, apiKey) => {
 
     // Make API call
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages,
       temperature: 0.7,
-      max_tokens: 2500
+      max_tokens: 2500,
+      response_format: { type: "json_object" }
     });
 
     progressCallback(80);

@@ -20,6 +20,7 @@ import { analyzeProblemAwareness } from '../utils/problemAwarenessMatrixAgent';
 import { analyzeNeeds } from '../utils/needsAnalysisAgent';
 import { analyzeDemand } from '../utils/demandAnalystAgent';
 import { analyzeOpportunityQualification } from '../utils/opportunityQualificationAgent';
+import { analyzeFrictionPoints } from '../utils/frictionAnalysisAgent';
 import { generateFinalReport } from '../utils/finalReportAgent';
 import OpenAI from 'openai';
 
@@ -30,6 +31,7 @@ const AGENT_SEQUENCE = [
   'jtbd',
   'jtbdGains',
   'painExtractor',
+  'frictionAnalysis',
   'problemAwareness',
   'finalReport'
 ];
@@ -54,6 +56,8 @@ const CustomerProblemAnalyst = () => {
   // Track the transcript optimization status separately
   const [isOptimizingTranscript, setIsOptimizingTranscript] = useLocalStorage('aiAnalysisIsOptimizing', false);
   const [optimizationProgress, setOptimizationProgress] = useLocalStorage('aiAnalysisOptimizationProgress', 0);
+  // Track dynamic step text for each agent
+  const [agentStepText, setAgentStepText] = useLocalStorage('aiAnalysisStepText', {});
   
   // Track the current agent in the analysis sequence
   const [currentAnalysisIndex, setCurrentAnalysisIndex] = useLocalStorage('aiAnalysisCurrentIndex', 0);
@@ -437,27 +441,35 @@ const CustomerProblemAnalyst = () => {
       }));
 
       let results;
-      const updateProgress = (progress) => {
-        console.log(`Progress update for ${agentId}:`, progress);
+      const updateProgress = (progress, stepText) => {
+        console.log(`Progress update for ${agentId}:`, progress, stepText ? `(${stepText})` : '');
         
         // Update the regular agent progress
         setAgentProgress(prev => ({
           ...prev,
           [agentId]: progress
         }));
+        
+        // If step text is provided, update that too
+        if (stepText) {
+          setAgentStepText(prev => ({
+            ...prev,
+            [agentId]: stepText
+          }));
+        }
       };
 
       switch (agentId) {
         case 'longContextChunking':
           console.log('Long Context Chunking is bypassed in this version');
-          // Simulate progress updates to show the green progress bar
-          updateProgress(10);
+          // Simulate progress updates to show the green progress bar with step text
+          updateProgress(10, "Initializing transcript analysis...");
           await new Promise(resolve => setTimeout(resolve, 300));
-          updateProgress(30);
+          updateProgress(30, "Processing transcript content...");
           await new Promise(resolve => setTimeout(resolve, 300));
-          updateProgress(60);
+          updateProgress(60, "Optimizing for analysis...");
           await new Promise(resolve => setTimeout(resolve, 300));
-          updateProgress(90);
+          updateProgress(90, "Finalizing optimization...");
           await new Promise(resolve => setTimeout(resolve, 300));
           
           // Return a minimal result structure to satisfy any dependencies
@@ -483,7 +495,7 @@ const CustomerProblemAnalyst = () => {
           });
           
           // Initial progress update to show the green progress bar
-          updateProgress(5);
+          updateProgress(5, "Analyzing customer gains...");
           
           // Make sure analyzingAgents includes this agent
           setAnalyzingAgents(prev => new Set(prev).add(agentId));
@@ -500,7 +512,7 @@ const CustomerProblemAnalyst = () => {
           const gainsStoredResults = JSON.parse(localStorage.getItem('analysisResults') || '{}');
           
           // Initial progress update to show the green progress bar
-          updateProgress(5);
+          updateProgress(5, "Analyzing customer gains...");
           
           // Make sure analyzingAgents includes this agent
           setAnalyzingAgents(prev => new Set(prev).add(agentId));
@@ -578,16 +590,53 @@ const CustomerProblemAnalyst = () => {
             throw new Error('JTBD Gains Analysis results required for Pain Analysis');
           }
           
+          // Debug the gains results structure
           console.log('✅ Found all prerequisites for Pain Analysis');
+          console.log('Gains results type:', typeof gainsResults);
+          
+          // Validate that gainsResults is usable
+          if (typeof gainsResults === 'object' && gainsResults !== null) {
+            console.log('Gains results keys:', Object.keys(gainsResults));
+          } else if (typeof gainsResults === 'string') {
+            try {
+              const parsedGains = JSON.parse(gainsResults);
+              console.log('Successfully parsed string gains results, keys:', Object.keys(parsedGains));
+            } catch (e) {
+              console.warn('Gains results is a string but not valid JSON', gainsResults.substring(0, 100));
+            }
+          } else {
+            console.warn('Gains results is in an unexpected format:', gainsResults);
+          }
           
           try {
+            // Ensure gains results is in a format the pain extractor can handle
+            let formattedGainsResults = gainsResults;
+            
+            // If gainsResults is a string that looks like it could be JSON, try to parse it
+            if (typeof gainsResults === 'string' && 
+                (gainsResults.trim().startsWith('{') || gainsResults.trim().startsWith('['))) {
+              try {
+                formattedGainsResults = JSON.parse(gainsResults);
+                console.log('Converted string gains results to object for pain extractor');
+              } catch (e) {
+                console.warn('Could not parse gains results string as JSON:', e);
+                // If we can't parse it, we'll use it as is
+              }
+            }
+            
             // Create input with transcript and gains results
             const painInput = {
               transcript: transcript,
-              gainsAnalysis: gainsResults
+              gainsAnalysis: formattedGainsResults
             };
             
             console.log('Starting Pain Analysis with transcript and gains results');
+            console.log('Pain input structure:', {
+              hasTranscript: !!painInput.transcript,
+              transcriptLength: painInput.transcript?.length,
+              hasGainsAnalysis: !!painInput.gainsAnalysis,
+              gainsAnalysisType: typeof painInput.gainsAnalysis
+            });
             
             results = await analyzePainPoints(
               painInput,
@@ -597,6 +646,66 @@ const CustomerProblemAnalyst = () => {
           } catch (error) {
             console.error('Pain Analysis failed:', error);
             toast.error(error.message || "Pain Analysis failed");
+            setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
+            throw error;
+          }
+          break;
+
+        case 'frictionAnalysis':
+          // Get the most up-to-date results from all sources
+          const frictionStoredResults = JSON.parse(localStorage.getItem('analysisResults') || '{}');
+          
+          // Get Pain Analysis results from all sources - this is the primary prerequisite
+          const painResultsForFriction = 
+            stateRef.current.localAnalysisResults.painExtractor || 
+            frictionStoredResults.painExtractor || 
+            localAnalysisResults.painExtractor;
+          
+          // Get JTBD Primary Goal results from all sources for enhanced analysis
+          const jtbdPrimaryResults = 
+            stateRef.current.localAnalysisResults.jtbd || 
+            frictionStoredResults.jtbd || 
+            localAnalysisResults.jtbd;
+          
+          // Set initial progress update
+          setAgentProgress(prev => ({
+            ...prev,
+            [agentId]: 5
+          }));
+          
+          // Verify we have the required prerequisite (pain analysis)
+          if (!painResultsForFriction) {
+            console.error('Missing prerequisite for Friction Analysis:', {
+              hasPainResults: {
+                inStateRef: !!stateRef.current.localAnalysisResults.painExtractor,
+                inLocalStorage: !!frictionStoredResults.painExtractor,
+                inComponentState: !!localAnalysisResults.painExtractor
+              }
+            });
+            throw new Error('Pain Analysis results required for Friction Analysis');
+          }
+          
+          console.log('✅ Found pain results for Friction Analysis');
+          console.log('JTBD primary goal results available:', !!jtbdPrimaryResults);
+          
+          try {
+            // Create input with transcript and all available results
+            const frictionInput = {
+              transcript: transcript,
+              painAnalysis: painResultsForFriction,
+              jtbdResults: jtbdPrimaryResults  // Include JTBD results for primary goal context
+            };
+            
+            console.log('Starting Friction Analysis with transcript and pain results');
+            
+            results = await analyzeFrictionPoints(
+              frictionInput,
+              updateProgress,
+              storedApiKey
+            );
+          } catch (error) {
+            console.error('Friction Analysis failed:', error);
+            toast.error(error.message || "Friction Analysis failed");
             setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
             throw error;
           }
@@ -890,7 +999,14 @@ const CustomerProblemAnalyst = () => {
       console.log(`Analysis completed successfully for ${agentId}`);
 
     } catch (error) {
-      console.error(`Error running agent ${agentId}:`, error);
+      // Log detailed error information
+      console.error(`Error running agent ${agentId}:`, {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        details: error.details || 'No details available',
+        originalError: error.originalError || 'No original error'
+      });
       
       // Clear analyzing state
       setAnalyzingAgents(prev => {
@@ -905,14 +1021,18 @@ const CustomerProblemAnalyst = () => {
         [agentId]: 0
       }));
       
-      // Show appropriate error message
+      // Show appropriate error message with more details
       let errorMessage = "An unexpected error occurred";
       if (error.code === 'MISSING_PREREQUISITE') {
         errorMessage = error.message;
       } else if (error.code === 'AGENT_RUNNING') {
         errorMessage = "Please wait for the current analysis to complete";
       } else {
+        // Include more details in the error message
         errorMessage = error.message || "Failed to run analysis";
+        if (error.details?.stage) {
+          errorMessage += ` (at ${error.details.stage} stage)`;
+        }
       }
       
       toast.error(errorMessage);
@@ -955,9 +1075,61 @@ const CustomerProblemAnalyst = () => {
   }, [setLastViewedResult]);
 
   const handleClearData = useCallback(() => {
-    clearAllState();
-    toast.success("All analysis data has been reset.");
-  }, [clearAllState, toast]);
+    try {
+      // First stop any ongoing operations
+      setIsSequenceRunning(false);
+      setCurrentAnalysisIndex(0);
+      setIsProcessing(false);
+      setIsOptimizingTranscript(false);
+      
+      // Set a reset flag in localStorage to signal a complete reset was requested
+      localStorage.setItem('resetRequested', 'true');
+      
+      // Clear all localStorage items individually to ensure complete removal
+      localStorage.removeItem('analysisResults');
+      localStorage.removeItem('agentProgress');
+      localStorage.removeItem('lastViewedResult');
+      localStorage.removeItem('aiAnalysisTranscript');
+      localStorage.removeItem('aiAnalysisAgents');
+      localStorage.removeItem('aiAnalysisHasAnalyzed');
+      localStorage.removeItem('aiAnalysisShowResult');
+      localStorage.removeItem('aiAnalysisUserSelectedView');
+      localStorage.removeItem('aiAnalysisCurrentAgent');
+      localStorage.removeItem('aiAnalysisIsProcessing');
+      localStorage.removeItem('aiAnalysisIsOptimizing');
+      localStorage.removeItem('aiAnalysisOptimizationProgress');
+      localStorage.removeItem('aiAnalysisCurrentIndex');
+      localStorage.removeItem('aiAnalysisIsSequenceRunning');
+      
+      // Clear all state manually
+      setLocalAnalysisResults({});
+      setAgentProgress({});
+      setTranscript('');
+      setAnalyzingAgents(new Set());
+      setHasAnalyzed(false);
+      setShowResult(null);
+      setCurrentAgent(null);
+      setUserHasSelectedView(false);
+      setLastViewedResult(null);
+      
+      // Explicitly update our refs to ensure they're cleared
+      stateRef.current = {
+        analyzingAgents: new Set(),
+        localAnalysisResults: {},
+        isSequenceRunning: false,
+        currentAnalysisIndex: 0
+      };
+      
+      localResultsRef.current = {};
+      handleRunAgentRef.current = null;
+      
+      // Force a complete page reload to reset all state - no toast needed as clearing is self-evident
+      window.location.href = window.location.pathname;
+    } catch (error) {
+      console.error('Error during reset:', error);
+      toast.error("There was an error resetting the analysis. Please try again.");
+    }
+  }, []);
 
   // Update ref values when state changes
   useEffect(() => {
@@ -969,6 +1141,16 @@ const CustomerProblemAnalyst = () => {
   
   // State restoration effect - runs once on component mount
   useEffect(() => {
+    // First check if a reset was requested
+    const resetRequested = localStorage.getItem('resetRequested');
+    
+    if (resetRequested === 'true') {
+      // Clear the reset flag
+      localStorage.removeItem('resetRequested');
+      console.log('🧹 Reset was requested, skipping state restoration');
+      return;
+    }
+    
     // Check if we have any completed analyses in localStorage
     const storedResults = JSON.parse(localStorage.getItem('analysisResults') || '{}');
     const completedAnalyses = Object.keys(storedResults).filter(key => key !== 'transcript');
@@ -1143,6 +1325,8 @@ const CustomerProblemAnalyst = () => {
             isDone={isDone}
             isOptimizingTranscript={isOptimizingTranscript}
             optimizationProgress={optimizationProgress}
+            showResult={showResult}
+            agentStepText={agentStepText}
           />
         </div>
         <div className="w-2/3 p-4 overflow-y-auto" ref={resultsContainerRef}>

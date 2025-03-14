@@ -5,9 +5,9 @@ import { extractIntervieweeResponses, validatePreprocessing } from './transcript
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Helper function to update progress with delay
-const updateProgress = async (progress, progressCallback) => {
-  console.log('Setting Problem Awareness Matrix progress to:', progress);
-  progressCallback(progress);
+const updateProgress = async (progress, progressCallback, stepText) => {
+  console.log('Setting Problem Awareness Matrix progress to:', progress, stepText ? `(${stepText})` : '');
+  progressCallback(progress, stepText);
   await delay(100);
 };
 
@@ -122,43 +122,77 @@ export const analyzeProblemAwareness = async (input, progressCallback, apiKey) =
   });
 
   // Start with initial progress
-  await updateProgress(2, progressCallback);
+  await updateProgress(2, progressCallback, "Initializing problem awareness analysis...");
 
   try {
-    // Extract the transcript and pain analysis from input
-    if (!input || (!input.transcript && !input.painAnalysis)) {
-      console.error('Invalid input:', input);
+    // Check for required prerequisites
+    if (!input) {
+      console.error('Invalid input: Input is null or undefined');
+      throw new Error('Invalid input. Input object is required.');
+    }
+
+    // Log if frictionAnalysis is missing but don't require it
+    if (!input.frictionAnalysis) {
+      console.warn('Note: frictionAnalysis is not available, proceeding with only painAnalysis');
+    }
+    
+    // Extract the transcript and analysis data from input
+    if (!input.transcript && !input.painAnalysis) {
+      console.error('Invalid input: Missing transcript and painAnalysis');
       throw new Error('Invalid input. Transcript or pain analysis is required.');
     }
     
-    // Get the pain analysis results - handle both object and string formats
-    let painResults = input.painAnalysis;
+    // Prepare analysis content from both pain and friction analysis
     let analysisContent = '';
+    let combinedAnalysis = {};
     
-    if (typeof painResults === 'string') {
-      try {
-        painResults = JSON.parse(painResults);
-        console.log('Successfully parsed string pain results');
-      } catch (e) {
-        console.warn('Could not parse pain results as JSON, using as-is', e);
+    // Process pain analysis results - handle both object and string formats
+    if (input.painAnalysis) {
+      let painResults = input.painAnalysis;
+      if (typeof painResults === 'string') {
+        try {
+          painResults = JSON.parse(painResults);
+          console.log('Successfully parsed string pain results');
+        } catch (e) {
+          console.warn('Could not parse pain results as JSON, using as-is', e);
+        }
       }
+      combinedAnalysis.painAnalysis = painResults;
+    }
+    
+    // Process friction analysis results - handle both object and string formats
+    if (input.frictionAnalysis) {
+      let frictionResults = input.frictionAnalysis;
+      if (typeof frictionResults === 'string') {
+        try {
+          frictionResults = JSON.parse(frictionResults);
+          console.log('Successfully parsed string friction results');
+        } catch (e) {
+          console.warn('Could not parse friction results as JSON, using as-is', e);
+        }
+      }
+      combinedAnalysis.frictionAnalysis = frictionResults;
+    } else {
+      // If frictionAnalysis is not available, add a placeholder to avoid errors
+      console.log('Adding empty frictionAnalysis placeholder');
+      combinedAnalysis.frictionAnalysis = { note: 'Friction analysis not available' };
     }
     
     // If we have a finalSummary property (for backward compatibility)
     if (input.finalSummary) {
-      analysisContent = input.finalSummary;
-    } else if (painResults) {
-      // Use pain analysis as the primary content
-      analysisContent = JSON.stringify(painResults);
-    } else {
-      throw new Error('No valid analysis content found in input.');
+      combinedAnalysis.finalSummary = input.finalSummary;
     }
     
+    // Combine all analysis data
+    analysisContent = JSON.stringify(combinedAnalysis);
+    
     console.log('Starting problem awareness matrix analysis with content length:', analysisContent.length);
+    await updateProgress(30, progressCallback, "Assessing customer problem awareness...");
 
     // Initial awareness matrix analysis
     const matrixResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
@@ -174,14 +208,15 @@ export const analyzeProblemAwareness = async (input, progressCallback, apiKey) =
     });
 
     // Update progress after main analysis
-    await updateProgress(60, progressCallback);
+    await updateProgress(60, progressCallback, "Analyzing awareness levels...");
 
     const matrixResults = JSON.parse(matrixResponse.choices[0].message.content.trim());
 
     // Perform additional synthesis analysis
     console.log('Starting awareness synthesis analysis...');
     const synthesisResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
@@ -197,7 +232,7 @@ export const analyzeProblemAwareness = async (input, progressCallback, apiKey) =
     });
 
     // Update progress after synthesis
-    await updateProgress(85, progressCallback);
+    await updateProgress(85, progressCallback, "Synthesizing analysis results...");
 
     const synthesisResults = JSON.parse(synthesisResponse.choices[0].message.content.trim());
     
@@ -208,7 +243,7 @@ export const analyzeProblemAwareness = async (input, progressCallback, apiKey) =
     };
 
     // Complete the progress
-    await updateProgress(100, progressCallback);
+    await updateProgress(100, progressCallback, "Problem awareness analysis complete");
 
     return finalResults;
 

@@ -6,6 +6,7 @@ import VerticalNavigation from "./components/VerticalNavigation";
 import { useState } from "react";
 import CustomerProblemAnalyst from "./pages/CustomerProblemAnalyst";
 import ProblemHypothesis from "./pages/ProblemHypothesis";
+import FAQs from "./pages/FAQs";
 import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => {
                   } 
                 />
                 <Route path="/problem-hypothesis" element={<ProblemHypothesis />} />
+                <Route path="/faqs" element={<FAQs />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </div>

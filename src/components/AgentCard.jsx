@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { getCurrentStepLabel } from "../utils/agentStepDefinitions";
 
 const AgentCard = ({ 
   agent, 
@@ -15,7 +16,11 @@ const AgentCard = ({
   className = '',
   // New prop to show when transcript optimization is in progress
   isOptimizingTranscript = false,
-  optimizationProgress = 0
+  optimizationProgress = 0,
+  // New prop to indicate if this card is currently selected
+  isSelected = false,
+  // New prop for dynamic step text
+  stepText = ""
 }) => {
   // For tracking state changes
   const prevIsAnalyzing = useRef(isAnalyzing);
@@ -25,6 +30,8 @@ const AgentCard = ({
   const prevIsOptimizing = useRef(isOptimizingTranscript);
   const prevProgress = useRef(progress);
   const prevOptProgress = useRef(optimizationProgress);
+  // For step text
+  const [currentStepText, setCurrentStepText] = useState(stepText || "Analysis in progress");
   
   // Log meaningful state changes to help debugging
   useEffect(() => {
@@ -52,6 +59,27 @@ const AgentCard = ({
     }
     prevOptProgress.current = optimizationProgress;
   }, [agent.id, isAnalyzing, isOptimizingTranscript, progress, optimizationProgress]);
+  
+  // Update the step text whenever any relevant props change
+  useEffect(() => {
+    // Directly set the text without any transitions
+    if (stepText) {
+      // If explicitly provided, use that
+      setCurrentStepText(stepText);
+    } else if (isAnalyzing && agent?.id) {
+      // Generate dynamic text based on the agent and progress
+      setCurrentStepText(getCurrentStepLabel(agent.id, progress) || "Analysis in progress");
+    } else if (isOptimizingTranscript) {
+      // Generate text based on optimization progress
+      if (optimizationProgress < 30) {
+        setCurrentStepText("Scanning transcript...");
+      } else if (optimizationProgress < 60) {
+        setCurrentStepText("Optimizing content...");
+      } else {
+        setCurrentStepText("Finalizing optimization...");
+      }
+    }
+  }, [agent?.id, progress, optimizationProgress, stepText, isAnalyzing, isOptimizingTranscript]);
   
   // Effect for simulating incremental progress movement
   useEffect(() => {
@@ -111,15 +139,21 @@ const AgentCard = ({
       return (
         <Badge 
           variant="outline" 
-          className="text-gray-500 border-transparent bg-transparent flex items-center gap-1 pr-2 pl-1"
+          className="text-gray-500 border-transparent bg-transparent flex flex-col gap-2 p-0 w-full"
         >
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="mr-2">Optimizing transcript</span>
-          <div className="flex-grow h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gray-400" 
-              style={{ width: `${displayOptProgress}%` }}
-            />
+          <div className="flex flex-col gap-1 w-full">
+            <div className="flex items-center gap-1 px-0">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>
+                {currentStepText || "Optimizing transcript"}
+              </span>
+            </div>
+            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gray-400" 
+                style={{ width: `${displayOptProgress}%` }}
+              />
+            </div>
           </div>
         </Badge>
       );
@@ -133,15 +167,21 @@ const AgentCard = ({
       return (
         <Badge 
           variant="outline" 
-          className="text-green-600 border-transparent bg-transparent flex items-center gap-1 pr-2 pl-1"
+          className="text-green-600 border-transparent bg-transparent flex flex-col gap-2 p-0 w-full"
         >
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="mr-2">Analysis in progress</span>
-          <div className="flex-grow h-2 bg-green-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-green-500" 
-              style={{ width: `${displayProgress}%` }}
-            />
+          <div className="flex flex-col gap-1 w-full">
+            <div className="flex items-center gap-1 px-0">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>
+                {currentStepText || "Analysis in progress"}
+              </span>
+            </div>
+            <div className="w-full h-2 bg-green-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500" 
+                style={{ width: `${displayProgress}%` }}
+              />
+            </div>
           </div>
         </Badge>
       );
@@ -168,8 +208,18 @@ const AgentCard = ({
     return null;
   };
 
+  // Determine if the card should be clickable (only if it has results)
+  const isClickable = hasResults || (isComplete === true);
+  
   return (
-    <Card className={`flex flex-col p-4 ${className}`}>
+    <Card 
+      className={`flex flex-col p-4 ${className} ${isSelected ? 'border-blue-200 border-2' : ''} ${isClickable ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+      onClick={() => {
+        if (isClickable) {
+          onViewResults();
+        }
+      }}
+    >
       <div className="flex-grow">
         <CardTitle className="text-lg font-semibold">{agent.name}</CardTitle>
         <CardDescription className="text-sm text-gray-500 mt-1">
@@ -182,6 +232,7 @@ const AgentCard = ({
           {getStatusBadge()}
         </div>
         <div className="ml-4 flex-shrink-0">
+          {/* Still keep the button for visual indication but the whole card is now clickable */}
           {getActionButton()}
         </div>
       </div>

@@ -19,7 +19,11 @@ const AgentSelection = ({
   isDone,
   // New props for transcript optimization status
   isOptimizingTranscript = false,
-  optimizationProgress = 0
+  optimizationProgress = 0,
+  // Current selected result for highlighting the selected card
+  showResult = null,
+  // New prop for agent step text
+  agentStepText = {}
 }) => {
   // Get the current agent in sequence
   const getCurrentAgent = () => {
@@ -52,6 +56,10 @@ const AgentSelection = ({
             // Pass optimization status only to the JTBD card when longContextChunking is running
             isOptimizingTranscript={agent.id === 'jtbd' && isOptimizingTranscript}
             optimizationProgress={optimizationProgress}
+            // Add visual indication of the selected card
+            isSelected={showResult === agent.id}
+            // Pass the current step text if available
+            stepText={agentStepText[agent.id] || ""}
           />
         );
       })}

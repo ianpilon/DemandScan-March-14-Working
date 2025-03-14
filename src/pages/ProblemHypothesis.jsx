@@ -60,7 +60,7 @@ Please generate a hypothesis statement based on these assumptions.
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -71,6 +71,7 @@ Please generate a hypothesis statement based on these assumptions.
             content: prompt
           }
         ],
+        response_format: { type: "json_object" }
       });
 
       setGeneratedHypothesis(response.choices[0].message.content.trim());

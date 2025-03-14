@@ -103,8 +103,9 @@ const analyzeChunk = async (openai, chunk, chunkIndex, totalChunks) => {
   ];
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o',
     messages,
+    response_format: { type: "json_object" },
     temperature: 0.7,
     max_tokens: 2500
   });
@@ -125,13 +126,24 @@ const synthesizeAnalyses = async (openai, analyses) => {
   ];
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o',
     messages,
+    response_format: { type: "json_object" },
     temperature: 0.7,
     max_tokens: 2500
   });
 
   return JSON.parse(response.choices[0].message.content);
+};
+
+// Helper function to update progress with delay
+const updateProgress = async (progress, progressCallback, stepText) => {
+  console.log('Setting JTBD Primary Goal progress to:', progress, stepText ? `(${stepText})` : '');
+  if (progressCallback) {
+    progressCallback(progress, stepText);
+  }
+  // Add a small delay to make the progress updates smoother
+  await new Promise(resolve => setTimeout(resolve, 100));
 };
 
 export const analyzeJTBDPrimaryGoal = async (transcriptData, progressCallback, apiKey) => {
@@ -157,7 +169,7 @@ export const analyzeJTBDPrimaryGoal = async (transcriptData, progressCallback, a
   });
 
   try {
-    if (progressCallback) progressCallback(10);
+    await updateProgress(10, progressCallback, "Initializing JTBD analysis...");
     console.log('Initialized OpenAI client');
 
     // Use the raw transcript directly
@@ -172,17 +184,18 @@ export const analyzeJTBDPrimaryGoal = async (transcriptData, progressCallback, a
       }
     ];
 
-    if (progressCallback) progressCallback(30);
+    await updateProgress(30, progressCallback, "Analyzing customer jobs and goals...");
     console.log('Prepared messages for analysis');
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages,
+      response_format: { type: "json_object" },
       temperature: 0.7,
       max_tokens: 2500
     });
 
-    if (progressCallback) progressCallback(80);
+    await updateProgress(80, progressCallback, "Processing JTBD insights...");
     console.log('Received response from OpenAI');
 
     if (!response.choices?.[0]?.message?.content) {
@@ -197,7 +210,7 @@ export const analyzeJTBDPrimaryGoal = async (transcriptData, progressCallback, a
       throw new Error('Invalid analysis result structure');
     }
 
-    if (progressCallback) progressCallback(100);
+    await updateProgress(100, progressCallback, "JTBD analysis complete");
     console.log('Analysis complete');
 
     return analysisResult;
@@ -205,7 +218,7 @@ export const analyzeJTBDPrimaryGoal = async (transcriptData, progressCallback, a
   } catch (error) {
     console.error('Error in JTBD Primary Goal Analysis:', error);
     // Ensure progress callback is reset on error
-    if (progressCallback) progressCallback(0);
+    if (progressCallback) progressCallback(0, "Analysis error");
     throw error;
   }
 };

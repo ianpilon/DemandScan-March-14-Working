@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { BackdropTooltip } from "@/components/ui/backdrop-tooltip";
 import { agents } from '../data/agents';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight, Code, Info } from 'lucide-react';
+import { ChevronDown, ChevronRight, Code } from 'lucide-react';
 import { analyzePainPoints } from '../utils/jtbdPainExtractorAgent';
 import ProblemAwarenessResults from './ProblemAwarenessResults';
-import { processBadgesForDownload, addConfidenceRubricToFooter } from '../utils/downloadUtils';
 
 /**
  * Helper function to determine badge variant based on confidence score
@@ -421,63 +419,14 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
    * - 3 < Average ≤ 4: High
    * - Average > 4: Critical
    */
-  // Format CURSE scores for display, handling both numeric and range formats
-  const formatCurseScore = (score) => {
-    // Handle different formats (number or range)
-    if (typeof score === 'number') {
-      return score.toFixed(1);
-    } else if (typeof score === 'string' && score.includes('-')) {
-      // For range format (e.g., '3-4')
-      return score;
-    } else {
-      return '0';
-    }
-  };
-
   const calculateSeverityFromCurseScore = (curseScore) => {
     if (!curseScore) return 'Medium'; // Default if no CURSE score available
     
-    // Handle new format with ranges and confidence levels
-    if (typeof curseScore === 'object' && curseScore !== null) {
-      // Check if curseScore contains range properties (new format)
-      const hasRanges = Object.values(curseScore).some(value => 
-        typeof value === 'object' && value !== null && 'range' in value
-      );
-      
-      if (hasRanges) {
-        // New format: Calculate average using the midpoint of each range
-        let sum = 0;
-        let count = 0;
-        
-        for (const key of ['Crucial', 'Ubiquitous', 'Recurring', 'Specific', 'Extreme']) {
-          if (curseScore[key] && Array.isArray(curseScore[key].range) && curseScore[key].range.length === 2) {
-            // Use midpoint of range as the score value
-            const midpoint = (curseScore[key].range[0] + curseScore[key].range[1]) / 2;
-            sum += midpoint;
-            count++;
-          }
-        }
-        
-        if (count === 0) return 'Medium';
-        const avgScore = sum / count;
-        
-        if (avgScore > 4) return 'Critical';
-        if (avgScore > 3) return 'High';
-        if (avgScore > 2) return 'Moderate';
-        if (avgScore > 1) return 'Low';
-        return 'Minimal';
-      }
-    }
-    
-    // Original format: Calculate average of direct CURSE scores
+    // Calculate average of CURSE scores
     const scores = Object.values(curseScore);
     if (!scores.length) return 'Medium';
     
-    // Filter out any non-numeric values (handles both old and new formats gracefully)
-    const numericScores = scores.filter(score => typeof score === 'number');
-    if (numericScores.length === 0) return 'Medium';
-    
-    const avgScore = numericScores.reduce((sum, score) => sum + score, 0) / numericScores.length;
+    const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
     
     if (avgScore > 4) return 'Critical';
     if (avgScore > 3) return 'High';
@@ -494,16 +443,18 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
    * - Improved mapping for severity levels
    */
   const getSeverityBadgeStyles = (severity) => {
-    // Use custom variant to use consistent styling across the app
-    const variant = "custom";
-    
-    // Updated colors based on the new color scheme
+    const variant = 
+      severity === 'Critical' || severity === 5 ? "destructive" :
+      severity === 'High' || severity === 4 ? "orange" :
+      severity === 'Medium' || severity === 'Moderate' || severity === 3 ? "yellow" :
+      severity === 'Low' || severity === 2 ? "outline" :
+      "secondary";
+
     const className = 
-      (severity === 'Critical' || severity === 5) ? "bg-[#F00D0D] text-white hover:bg-[#D00C0C]" :
-      (severity === 'High' || severity === 4) ? "bg-[#FE8C8C] text-black hover:bg-[#FE7A7A]" :
-      (severity === 'Medium' || severity === 'Moderate' || severity === 3) ? "bg-[#FFEE8C] text-black hover:bg-[#FFEB7A]" :
-      (severity === 'Low' || severity === 2) ? "bg-[#D5EAFF] text-blue-800 hover:bg-[#C4E2FF]" :
-      (severity === 'Minimal' || severity === 1) ? "bg-[#F0F7FF] text-blue-800 hover:bg-[#E0F0FF]" :
+      (severity === 'High' || severity === 4) ? "bg-orange-500 hover:bg-orange-600" :
+      (severity === 'Medium' || severity === 'Moderate' || severity === 3) ? "bg-yellow-500 hover:bg-yellow-600 text-black" :
+      (severity === 'Low' || severity === 2) ? "bg-blue-100 text-blue-800 hover:bg-blue-200" :
+      (severity === 'Minimal' || severity === 1) ? "bg-gray-100 text-gray-800 hover:bg-gray-200" :
       "";
 
     return { variant, className };
@@ -556,31 +507,6 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
       hasCurseAnalysis: !!curseAnalysis
     });
 
-    // Sort pain points by severity (Critical → High → Moderate → Low → Minimal)
-    const sortedPains = [...identifiedPains].sort((a, b) => {
-      // Calculate severity for both pain points
-      const severityA = a.curseScore ? 
-        calculateSeverityFromCurseScore(a.curseScore) : 
-        a.severity || 'Medium';
-      
-      const severityB = b.curseScore ? 
-        calculateSeverityFromCurseScore(b.curseScore) : 
-        b.severity || 'Medium';
-      
-      // Map severity levels to numeric values for sorting
-      const severityMap = {
-        'Critical': 5,
-        'High': 4,
-        'Moderate': 3,
-        'Medium': 3, // Treat Medium same as Moderate
-        'Low': 2,
-        'Minimal': 1
-      };
-      
-      // Sort in descending order (higher severity first)
-      return severityMap[severityB] - severityMap[severityA];
-    });
-
     return (
       <div className="space-y-6">
         {/* Pain Points Card */}
@@ -591,7 +517,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {sortedPains.map((pain, index) => {
+              {identifiedPains.map((pain, index) => {
                 // Calculate severity from curseScore if available or use existing severity
                 const severity = pain.curseScore ? 
                   calculateSeverityFromCurseScore(pain.curseScore) : 
@@ -606,46 +532,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   <div key={index} className="bg-secondary p-4 rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-semibold">{painTitle}</h4>
-                      <BackdropTooltip
-                        triggerClassName="inline-block"
-                        className="max-w-md text-xs bg-secondary"
-                        content={
-                          <div className="space-y-2">
-                            {severity === 'Critical' && (
-                              <>
-                                <p>Existential threat to operations or goals.</p>
-                                <p>Immediately blocks progress; renders goals unachievable; demands urgent intervention</p>
-                              </>
-                            )}
-                            {severity === 'High' && (
-                              <>
-                                <p>Major obstacle to operations or goals.</p>
-                                <p>Significantly hinders progress; requires substantial resources to overcome; creates ongoing friction</p>
-                              </>
-                            )}
-                            {severity === 'Medium' || severity === 'Moderate' && (
-                              <>
-                                <p>Notable hindrance to efficiency.</p>
-                                <p>Measurable impact on time, resources, or quality; causes regular frustration</p>
-                              </>
-                            )}
-                            {severity === 'Low' && (
-                              <>
-                                <p>Minor inconvenience.</p>
-                                <p>Creates occasional inefficiencies; easily worked around; limited impact on goals</p>
-                              </>
-                            )}
-                            {severity === 'Minimal' && (
-                              <>
-                                <p>Barely noticeable friction.</p>
-                                <p>Negligible impact on operations; rarely noticed; extremely low priority</p>
-                              </>
-                            )}
-                          </div>
-                        }
-                      >
-                        <Badge variant={variant} className={className}>{severity} severity</Badge>
-                      </BackdropTooltip>
+                      <Badge variant={variant} className={className}>{severity}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
                       <span className="font-medium">Category:</span> {pain.category}
@@ -659,40 +546,14 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     
                     {/* Display CURSE scores if available */}
                     {pain.curseScore && (
-                      <div className="bg-[#FAFBFD] p-3 rounded-md mb-3 shadow-sm">
-                        <p className="text-sm">
-                          <BackdropTooltip
-                            triggerClassName="font-medium underline decoration-dotted"
-                            className="max-w-md text-xs bg-secondary"
-                            content={
-                              <div className="space-y-2">
-                                <p className="font-semibold">The CURSE framework is a comprehensive evaluation system that helps prioritize customer pain points by measuring five key dimensions using a simple 0-5 scale:</p>
-                                <p><strong>C - Crucial:</strong> How important is this problem to the customer's goals? A higher score means the pain point is more central to what they're trying to accomplish.</p>
-                                <p><strong>U - Ubiquitous:</strong> How widespread is this problem across the customer's experience? A higher score indicates the problem affects many aspects of their work or many people within their organization.</p>
-                                <p><strong>R - Recurring:</strong> How often does this problem happen? Higher scores mean the customer faces this challenge repeatedly rather than just occasionally.</p>
-                                <p><strong>S - Specific:</strong> How well-defined is the problem? Higher scores indicate a clear, concrete issue rather than a vague feeling or general frustration.</p>
-                                <p><strong>E - Extreme:</strong> How severe is the pain? Higher scores reflect problems that cause significant distress, wasted time, or financial impact.</p>
-                                <p>The system combines these five dimensions to calculate an overall severity rating for each pain point. This helps prioritize which issues deserve immediate attention (Critical and High severity) versus those that can be addressed later (Moderate, Low, and Minimal severity).</p>
-                              </div>
-                            }
-                          >
-                            <span className="font-medium">CURSE Scores:</span>
-                          </BackdropTooltip>{' '}
-                          {Object.entries(pain.curseScore).map(([key, value]) => {
-                            // Check if this is the new format with ranges and confidence
-                            if (value && typeof value === 'object' && value.range) {
-                              return (
-                                <span key={key}>
-                                  {key}: {value.range[0]}-{value.range[1]} ({value.confidence}){' '}
-                                </span>
-                              );
-                            } else {
-                              // Original format with direct values
-                              return <span key={key}>{key}: {value}{' '}</span>;
-                            }
-                          })}
-                        </p>
-                      </div>
+                      <p className="text-sm mb-2">
+                        <span className="font-medium">CURSE Scores:</span> 
+                        Crucial: {pain.curseScore.Crucial}, 
+                        Ubiquitous: {pain.curseScore.Ubiquitous}, 
+                        Recurring: {pain.curseScore.Recurring}, 
+                        Specific: {pain.curseScore.Specific}, 
+                        Extreme: {pain.curseScore.Extreme}
+                      </p>
                     )}
                     
                     <div className="flex flex-wrap gap-2">
@@ -714,153 +575,109 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                 );
               })}
             </div>
-              
-            {/* Analysis Summary */}
-            <div className="mt-6 pt-6 border-t">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Analysis Summary</h3>
-                <p className="text-sm text-muted-foreground">
-                  {(() => {
-                    // Generate insights based on the pain points content
-                    if (!identifiedPains || identifiedPains.length === 0) {
-                      return 'No customer pain points were identified in this analysis.';
-                    }
-                    
-                    // Get categories and their counts
-                    const categories = {};
-                    identifiedPains.forEach(pain => {
-                      if (pain.category) {
-                        categories[pain.category] = (categories[pain.category] || 0) + 1;
-                      }
-                    });
-                    
-                    // Sort categories by frequency
-                    const sortedCategories = Object.entries(categories)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([category]) => category);
-                    
-                    // Count critical and high severity pains
-                    const criticalPains = identifiedPains.filter(p => calculateSeverityFromCurseScore(p.curseScore) === 'Critical');
-                    const highPains = identifiedPains.filter(p => calculateSeverityFromCurseScore(p.curseScore) === 'High');
-                    
-                    // Extract titles of top pain points by severity
-                    const topPainTitles = [...criticalPains, ...highPains]
-                      .slice(0, 3)
-                      .map(p => p.title.replace(/[.,;!]$/, ''));
-                    
-                    // Build the summary text
-                    let summary = `This analysis identified ${identifiedPains.length} customer pain points `;
-                    
-                    if (sortedCategories.length > 0) {
-                      if (sortedCategories.length === 1) {
-                        summary += `in the ${sortedCategories[0]} category. `;
-                      } else if (sortedCategories.length === 2) {
-                        summary += `across ${sortedCategories[0]} and ${sortedCategories[1]} categories. `;
-                      } else {
-                        const mainCategories = sortedCategories.slice(0, 2).join(', ');
-                        summary += `primarily in ${mainCategories}, and ${sortedCategories.length - 2} other categories. `;
-                      }
-                    }
-                    
-                    // Add information about critical/high pain points
-                    if (criticalPains.length > 0) {
-                      summary += `There ${criticalPains.length === 1 ? 'is' : 'are'} ${criticalPains.length} critical pain point${criticalPains.length === 1 ? '' : 's'} `;
-                      if (topPainTitles.length > 0 && criticalPains.length <= 2) {
-                        summary += `including "${criticalPains[0].title}" `;
-                      }
-                      summary += 'that require immediate attention. ';
-                    }
-                    
-                    if (highPains.length > 0) {
-                      summary += `There ${highPains.length === 1 ? 'is' : 'are'} also ${highPains.length} high severity pain point${highPains.length === 1 ? '' : 's'} `;
-                      if (topPainTitles.length > 0 && highPains.length <= 2 && criticalPains.length === 0) {
-                        summary += `such as "${highPains[0].title}" `;
-                      }
-                      summary += 'impacting customer experience. ';
-                    }
-                    
-                    // Add common impact themes if available
-                    const commonImpacts = identifiedPains
-                      .map(p => p.impact)
-                      .filter(Boolean)
-                      .slice(0, 3);
-                    
-                    if (commonImpacts.length > 0) {
-                      // Extract keywords from impacts
-                      const impactText = commonImpacts.join(' ').toLowerCase();
-                      const issueWords = ['delay', 'frustrat', 'confus', 'difficult', 'time', 'error', 'fail', 'complex', 'slow', 'cost'];
-                      const foundIssues = issueWords.filter(word => impactText.includes(word));
-                      
-                      if (foundIssues.length > 0) {
-                        summary += `Common issues include ${foundIssues.slice(0, 2).join(' and ')}, which are affecting customer satisfaction.`;
-                      }
-                    }
-                    
-                    return summary;
-                  })()}
-                </p>
-                
-
-              </div>
-            </div>
           </CardContent>
         </Card>
+
+        {/* Pain Level Scoring Rubric */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pain Level Scoring Rubric</CardTitle>
+            <CardDescription>CURSE framework for evaluating pain points</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-12 gap-4 p-4 bg-secondary/50 font-medium">
+              <div className="col-span-1">Score</div>
+              <div className="col-span-2">Level</div>
+              <div className="col-span-4">Description</div>
+              <div className="col-span-5">Indicators</div>
+            </div>
+            <PainLevelRow 
+              score={5} 
+              level="Critical" 
+              description="Existential threat to operations or goals" 
+              indicators="Immediately blocks progress; renders goals unachievable; demands urgent intervention" 
+            />
+            <PainLevelRow 
+              score={4} 
+              level="High" 
+              description="Major obstacle to operations or goals" 
+              indicators="Significantly hinders progress; requires substantial resources to overcome; creates ongoing friction" 
+            />
+            <PainLevelRow 
+              score={3} 
+              level="Moderate" 
+              description="Notable hindrance to efficiency" 
+              indicators="Measurable impact on time, resources, or quality; causes regular frustration" 
+            />
+            <PainLevelRow 
+              score={2} 
+              level="Low" 
+              description="Minor inconvenience" 
+              indicators="Creates occasional inefficiencies; easily worked around; limited impact on goals" 
+            />
+            <PainLevelRow 
+              score={1} 
+              level="Minimal" 
+              description="Barely noticeable friction" 
+              indicators="Negligible impact on operations; rarely noticed; extremely low priority" 
+            />
+          </CardContent>
+        </Card>
+
+        {/* Pain Points Summary Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pain Points Summary</CardTitle>
+            <CardDescription>Overview of identified pain points</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-secondary p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold">{metrics?.totalPainPoints || identifiedPains.length}</div>
+                <div className="text-sm text-muted-foreground">Total Pain Points</div>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold">{metrics?.criticalPains || 0}</div>
+                <div className="text-sm text-muted-foreground">Critical Pain Points</div>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg text-center col-span-2">
+                <div className="text-sm font-medium mb-1">Overall Pain Severity</div>
+                <div className="text-sm text-muted-foreground">
+                  {curseAnalysis ? 
+                    `Average CURSE Scores: Crucial: ${curseAnalysis.averageScores?.Crucial?.toFixed(1) || 'N/A'}, 
+                     Ubiquitous: ${curseAnalysis.averageScores?.Ubiquitous?.toFixed(1) || 'N/A'}, 
+                     Recurring: ${curseAnalysis.averageScores?.Recurring?.toFixed(1) || 'N/A'}, 
+                     Specific: ${curseAnalysis.averageScores?.Specific?.toFixed(1) || 'N/A'}, 
+                     Extreme: ${curseAnalysis.averageScores?.Extreme?.toFixed(1) || 'N/A'}` : 
+                    'No overall pain severity analysis available'
+                  }
+                </div>
+              </div>
+            </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       );
-    };
+  };
 
-
-  /**
-   * Renders friction results
-   * 
-   * CHANGES (2025-02-03):
-   * - Improved error handling and empty state display
-   * - Added confidence score display
-   * - Improved UI organization and readability
-   */
   const renderFrictionResults = (result) => {
     if (!result) return null;
 
     console.log('Friction Analysis Results:', result);
     
-    // Handle both new and old formats for backward compatibility
-    // New format will have primaryGoal and inferences fields
-    // Old format had frictionAnalysis and metrics directly at the top level
-    
-    let frictionAnalysis = [];
-    let primaryGoal = null;
-    let inferences = [];
-    
-    if (Array.isArray(result)) {
-      // This means the results were passed directly as an array of friction points
-      frictionAnalysis = result;
-    } else if (typeof result === 'object') {
-      // Check if we're dealing with the new format or old format
-      if (result.frictionAnalysis) {
-        // New format
-        frictionAnalysis = result.frictionAnalysis || [];
-        primaryGoal = result.primaryGoal || null;
-        inferences = result.inferences || [];
-      } else {
-        // Assume this is already in the frictionAnalysis format but passed directly
-        frictionAnalysis = result;
-      }
-    }
-    
-    // Backward compatibility for metrics
-    const metrics = result?.metrics || { 
-      totalFrictionPoints: frictionAnalysis.length,
-      criticalBlockers: frictionAnalysis.filter(f => f.severity === 'Critical').length 
-    };
+    // Extract friction analysis data
+    const { 
+      frictionAnalysis = [], 
+      metrics = { totalFrictionPoints: 0, criticalBlockers: 0 }
+    } = result;
     
     console.log('Extracted friction data:', {
       frictionAnalysisCount: frictionAnalysis.length,
-      hasPrimaryGoal: !!primaryGoal,
-      hasInferences: inferences.length > 0
+      hasMetrics: !!metrics
     });
 
-    // Only return null if we have no friction analysis data to display
-    if (frictionAnalysis.length === 0 && !primaryGoal && inferences.length === 0) {
+    if (frictionAnalysis.length === 0) {
       return null;
     }
 
@@ -870,11 +687,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
         <Card>
           <CardHeader>
             <CardTitle>Frictions Preventing Progress</CardTitle>
-            <CardDescription>
-              {primaryGoal ? 
-                `Analysis of friction points preventing progress toward: ${primaryGoal}` : 
-                'Analysis of significant blockers and friction points'}
-            </CardDescription>
+            <CardDescription>Analysis of significant blockers and friction points</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -898,49 +711,10 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   const { variant, className } = getSeverityBadgeStyles(severity);
                   
                   return (
-                    <div key={`friction-${index}`} style={{backgroundColor: '#f8f9fa'}} className="!bg-slate-50 p-3 rounded-md mb-3 shadow-sm">
+                    <div key={`friction-${index}`} className="border border-border p-4 rounded-lg">
                       <div className="flex justify-between items-start mb-3">
                         <h4 className="font-semibold">{friction.title}</h4>
-                        <BackdropTooltip
-                          triggerClassName="inline-block"
-                          className="max-w-md text-xs bg-secondary"
-                          content={
-                            <div className="space-y-2">
-                              {severity === 'Critical' && (
-                                <>
-                                  <p>Existential threat to operations or goals.</p>
-                                  <p>Immediately blocks progress; renders goals unachievable; demands urgent intervention</p>
-                                </>
-                              )}
-                              {severity === 'High' && (
-                                <>
-                                  <p>Major obstacle to operations or goals.</p>
-                                  <p>Significantly hinders progress; requires substantial resources to overcome; creates ongoing friction</p>
-                                </>
-                              )}
-                              {severity === 'Medium' || severity === 'Moderate' && (
-                                <>
-                                  <p>Notable hindrance to efficiency.</p>
-                                  <p>Measurable impact on time, resources, or quality; causes regular frustration</p>
-                                </>
-                              )}
-                              {severity === 'Low' && (
-                                <>
-                                  <p>Minor inconvenience.</p>
-                                  <p>Creates occasional inefficiencies; easily worked around; limited impact on goals</p>
-                                </>
-                              )}
-                              {severity === 'Minimal' && (
-                                <>
-                                  <p>Barely noticeable friction.</p>
-                                  <p>Negligible impact on operations; rarely noticed; extremely low priority</p>
-                                </>
-                              )}
-                            </div>
-                          }
-                        >
-                          <Badge variant={variant} className={className}>{severity} severity</Badge>
-                        </BackdropTooltip>
+                        <Badge variant={variant} className={className}>{severity}</Badge>
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm"><span className="font-medium">Impact:</span> {friction.impact}</p>
@@ -956,14 +730,12 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                         
                         {friction.recommendations && friction.recommendations.length > 0 && (
                           <div className="mt-3">
-                            <div className="bg-[#FAFBFD] p-3 rounded-md shadow-sm">
-                              <p className="text-sm font-medium mb-1">Recommendations:</p>
-                              <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                {friction.recommendations.map((rec, recIndex) => (
-                                  <li key={recIndex}>{rec}</li>
-                                ))}
-                              </ul>
-                            </div>
+                            <p className="text-sm font-medium mb-1">Recommendations:</p>
+                            <ul className="list-disc list-inside text-sm text-muted-foreground">
+                              {friction.recommendations.map((rec, recIndex) => (
+                                <li key={recIndex}>{rec}</li>
+                              ))}
+                            </ul>
                           </div>
                         )}
                       </div>
@@ -971,71 +743,72 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   );
                 })}
               </div>
-              
-              {/* Analysis Summary */}
-              <div className="mt-6 pt-6 border-t">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Analysis Summary</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This analysis identified {frictionAnalysis.length} friction points that are preventing progress toward {primaryGoal ? `the primary goal of "${primaryGoal}"` : 'the customer\'s primary goal'}. 
-                    {frictionAnalysis.filter(f => f.severity === 'Critical').length > 0 && 
-                      `There ${frictionAnalysis.filter(f => f.severity === 'Critical').length === 1 ? 'is' : 'are'} ${frictionAnalysis.filter(f => f.severity === 'Critical').length} critical friction point${frictionAnalysis.filter(f => f.severity === 'Critical').length === 1 ? '' : 's'} that must be addressed immediately. `
-                    }
-                    {frictionAnalysis.filter(f => f.severity === 'High').length > 0 && 
-                      `There ${frictionAnalysis.filter(f => f.severity === 'High').length === 1 ? 'is' : 'are'} ${frictionAnalysis.filter(f => f.severity === 'High').length} high severity friction point${frictionAnalysis.filter(f => f.severity === 'High').length === 1 ? '' : 's'} causing significant delays. `
-                    }
-                    Common themes include {Array.from(new Set(frictionAnalysis.flatMap(f => f.tags || []))).slice(0, 3).join(', ')}.
-                  </p>
-                  
-                  {inferences && inferences.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">Analysis Notes:</h4>
-                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                        {inferences.map((inference, idx) => (
-                          <li key={idx}>{inference.assumption}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Inferences Section - Only shown if we have inferences */}
-        {inferences && inferences.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Analysis Inferences</CardTitle>
-              <CardDescription>Additional context inferred from the transcript</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {inferences.map((inference, index) => (
-                  <div key={`inference-${index}`} className="border border-border p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">{inference.assumption}</h4>
-                    <p className="text-sm mb-2">{inference.reasoning}</p>
-                    
-                    {inference.quotes && inference.quotes.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium mb-1">Supporting quotes:</p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground">
-                          {inference.quotes.map((quote, quoteIndex) => (
-                            <li key={quoteIndex} className="italic">"{quote}"</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
+        {/* Pain Level Scoring Rubric */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pain Level Scoring Rubric</CardTitle>
+            <CardDescription>Guidelines for evaluating customer pain points and readiness</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Scoring Table */}
+            <div className="rounded-lg border">
+              {/* Header */}
+              <div className="grid grid-cols-12 gap-4 p-4 bg-secondary font-medium">
+                <div className="col-span-1">Score</div>
+                <div className="col-span-2">Pain Level</div>
+                <div className="col-span-4">Description</div>
+                <div className="col-span-5">Indicators</div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              
+              {/* Rows */}
+              <PainLevelRow
+                score={1}
+                level="Minimal"
+                description="Mentions a problem or a need"
+                indicators="May not fully recognize the issue • No urgency in their description"
+              />
+              <PainLevelRow
+                score={2}
+                level="Low"
+                description="They understand they have a problem"
+                indicators="Clearly articulates the problem • Shows awareness of the issue's impact • No active search for solutions yet"
+              />
+              <PainLevelRow
+                score={3}
+                level="Moderate"
+                description="Actively searching for a solution with a timeline"
+                indicators="Describes efforts to find a solution • Mentions a timeline or deadline • Expresses some urgency"
+              />
+              <PainLevelRow
+                score={4}
+                level="High"
+                description="Problem is so painful they've cobbled together an interim solution"
+                indicators="Describes a temporary fix they're using • Expresses frustration with current situation • Clearly states the inadequacy of their interim solution"
+              />
+              <PainLevelRow
+                score={5}
+                level="Critical"
+                description="Committed budget or can quickly acquire budget for a solution"
+                indicators="Mentions allocated budget for a solution • Expresses immediate readiness to purchase • Describes the problem as critically impacting their operations"
+              />
+            </div>
 
-        {/* End of content */}
-        
+            {/* Scoring Guidelines */}
+            <div className="mt-6 space-y-2">
+              <h4 className="font-medium mb-3">Scoring Guidelines:</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-4">
+                <li>Evaluate each person's description and assign a score from 1-5 based on the pain level they express.</li>
+                <li>Consider both explicit statements and implicit cues in their language.</li>
+                <li>If a description spans multiple levels, assign the highest applicable score.</li>
+                <li>Use the 'Indicators' column to guide your assessment, looking for similar expressions or sentiments in the person's description.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   };
@@ -1478,7 +1251,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
           <CardContent>
             <div className="space-y-6">
               {/* Overall Assessment */}
-              <div className="bg-secondary p-4 rounded-lg">
+              <div>
                 <h3 className="text-lg font-semibold mb-2">Overall Assessment: {result.overallAssessment}</h3>
                 <p className="text-sm text-muted-foreground">{result.summary}</p>
               </div>
@@ -1734,96 +1507,6 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
       <div className="space-y-6">
         <div>
           <Card>
-            <CardHeader>
-              <CardTitle>Job Components</CardTitle>
-              <CardDescription>Key aspects of the job the customer is trying to accomplish</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(result.jobComponents).map(([type, data]) => (
-                  <div key={type} className="bg-secondary p-4 rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold capitalize">
-                        {type} Jobs
-                      </h4>
-                      <BackdropTooltip 
-                        content={
-                          <div className="max-w-sm p-2">
-                            {type === 'functional' && (
-                              <span>The core action or task the customer is trying to accomplish, like drilling a hole.</span>
-                            )}
-                            {type === 'emotional' && (
-                              <span>The feelings the customer wants to experience or avoid while doing the job, like feeling confident or avoiding frustration.</span>
-                            )}
-                            {type === 'social' && (
-                              <span>How the customer wants to be perceived by others while doing the job, like being seen as handy or resourceful.</span>
-                            )}
-                          </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <svg className="w-5 h-5 text-muted-foreground hover:text-primary cursor-help" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
-                      </BackdropTooltip>
-                    </div>
-                    <p className="mb-2">{data.description}</p>
-                    {data.evidence && data.evidence.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {data.evidence.map((item, index) => (
-                            <li key={index} className="text-sm text-muted-foreground">"<i>{item}</i>"</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {/* Job Component Confidence Score */}
-                    {result.analysis && result.analysis.confidenceScore && (
-                      <div className="bg-[#FAFBFD] p-3 rounded-md mt-3 shadow-sm">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="text-sm font-medium">{type.charAt(0).toUpperCase() + type.slice(1)} Jobs Confidence:</h4>
-                          <BackdropTooltip
-                            content={
-                              <div className="max-w-sm p-2">
-                                <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                                <ul className="list-disc pl-4 space-y-1">
-                                  <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                                  <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                                  <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
-                                </ul>
-                              </div>
-                            }
-                            triggerClassName="cursor-help"
-                          >
-                            <Badge variant={getConfidenceBadgeVariant(
-                              type === 'functional' ? result.analysis.confidenceScore * 100 : 
-                              type === 'emotional' ? result.analysis.confidenceScore * 95 : 
-                              result.analysis.confidenceScore * 90
-                            )} className="cursor-help">
-                              {getConfidenceRange(
-                                type === 'functional' ? result.analysis.confidenceScore * 100 : 
-                                type === 'emotional' ? result.analysis.confidenceScore * 95 : 
-                                result.analysis.confidenceScore * 90
-                              )} Confidence
-                            </Badge>
-                          </BackdropTooltip>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Indicates confidence in correctly identifying the customer's {type.toLowerCase()} job components. Low confidence may suggest further research is needed.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <Card>
             <CardHeader className="pb-2">
               <div className="flex flex-row items-center justify-between">
                 <CardTitle>Primary Goal Analysis</CardTitle>
@@ -1841,35 +1524,37 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     </div>
                   )}
                 </div>
-                
-                {/* Primary Goal Confidence Score */}
-                {result.primaryGoal.confidence && (
-                  <div className="bg-white/90 p-3 rounded-md mt-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Primary Goal Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
-                            </ul>
-                          </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.primaryGoal.confidence * 100)} className="cursor-help">
-                          {getConfidenceRange(result.primaryGoal.confidence * 100)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Job Components</CardTitle>
+              <CardDescription>Key aspects of the job the customer is trying to accomplish</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Object.entries(result.jobComponents).map(([type, data]) => (
+                  <div key={type} className="bg-secondary p-4 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold capitalize">{type} Jobs</h4>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in correctly identifying the customer's primary goal. Low confidence may suggest further research is needed in this area.
-                    </p>
+                    <p className="mb-2">{data.description}</p>
+                    {data.evidence && data.evidence.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {data.evidence.map((item, index) => (
+                            <li key={index} className="text-sm text-muted-foreground">"<i>{item}</i>"</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -1902,28 +1587,18 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
             <div className="space-y-6">
               {/* Desired Outcomes */}
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Desired Outcomes</h3>
-                  <BackdropTooltip
-                    content={
-                      <div className="max-w-sm p-2">
-                        <span>The specific results customers hope to achieve when they successfully complete their job-to-be-done.</span>
-                      </div>
-                    }
-                    triggerClassName="cursor-help"
-                  >
-                    <svg className="w-5 h-5 text-muted-foreground hover:text-primary cursor-help" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </BackdropTooltip>
-                </div>
+                <h3 className="text-lg font-semibold">Desired Outcomes</h3>
                 <div className="grid gap-4">
                   {result.desiredOutcomes.map((outcome, index) => (
                     <div key={index} className="bg-secondary p-4 rounded-lg">
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <h4 className="font-medium">{outcome.outcome}</h4>
+                          <Badge className="mt-1">{outcome.importance}</Badge>
                         </div>
+                        <Badge variant={getConfidenceBadgeVariant(outcome.confidence)}>
+                          {getConfidenceRange(outcome.confidence)} Confidence
+                        </Badge>
                       </div>
                       {outcome.analysis && (
                         <div className="mt-2 mb-3">
@@ -1939,88 +1614,22 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                           ))}
                         </ul>
                       </div>
-                      {result.analysis.limitations && result.analysis.limitations.some(limitation => 
-                        (limitation.toLowerCase().includes("desired outcomes") || 
-                        limitation.toLowerCase().includes("emotional")) && 
-                        !limitation.toLowerCase().includes("social") && 
-                        !limitation.toLowerCase().includes("perception") && 
-                        !limitation.toLowerCase().includes("status") && 
-                        !limitation.toLowerCase().includes("performance") && 
-                        !limitation.toLowerCase().includes("measurable") && 
-                        !limitation.toLowerCase().includes("quantitative")
-                      ) && (
-                        <div className="mt-3 pt-2 border-t border-border">
-                          <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
-                          <ul className="list-disc pl-5 mt-1">
-                            {result.analysis.limitations.filter(limitation => 
-                              (limitation.toLowerCase().includes("desired outcomes") || 
-                              limitation.toLowerCase().includes("emotional")) && 
-                              !limitation.toLowerCase().includes("social") && 
-                              !limitation.toLowerCase().includes("perception") && 
-                              !limitation.toLowerCase().includes("status") && 
-                              !limitation.toLowerCase().includes("performance") && 
-                              !limitation.toLowerCase().includes("measurable") && 
-                              !limitation.toLowerCase().includes("quantitative")
-                            ).map((limitation, i) => (
-                              <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   ))}
-                  
-                  {/* Component Confidence Score */}
-                  <div className="bg-muted/40 p-3 rounded-md mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Desired Outcomes Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
-                            </ul>
-                          </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.analysis.desiredOutcomesConfidence || result.analysis.overallConfidence * 0.9)} className="cursor-help">
-                          {getConfidenceRange(result.analysis.desiredOutcomesConfidence || result.analysis.overallConfidence * 0.9)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in correctly identifying the customer's desired outcomes. Low confidence may suggest further research is needed in this area.
-                    </p>
-                  </div>
                 </div>
               </div>
 
               {/* Performance Gains */}
-              <div className="mt-6 pt-6 border-t">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Performance Gains</h3>
-                  <BackdropTooltip
-                    content={
-                      <div className="max-w-sm p-2">
-                        <span>Measurable improvements in functionality, efficiency, or effectiveness that customers seek when getting their job done.</span>
-                      </div>
-                    }
-                    triggerClassName="cursor-help"
-                  >
-                    <svg className="w-5 h-5 text-muted-foreground hover:text-primary cursor-help" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </BackdropTooltip>
-                </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Performance Gains</h3>
                 <div className="grid gap-4">
                   {result.performanceGains.map((gain, index) => (
                     <div key={index} className="bg-secondary p-4 rounded-lg">
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-medium">{gain.gain}</h4>
+                        <Badge variant={getConfidenceBadgeVariant(gain.confidence)}>
+                          {getConfidenceRange(gain.confidence)} Confidence
+                        </Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
                         <div>
@@ -2046,83 +1655,14 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                           ))}
                         </ul>
                       </div>
-                      {result.analysis.limitations && result.analysis.limitations.some(limitation => 
-                        (limitation.toLowerCase().includes("performance") || 
-                        limitation.toLowerCase().includes("measurable") || 
-                        limitation.toLowerCase().includes("quantitative")) && 
-                        !limitation.toLowerCase().includes("social") && 
-                        !limitation.toLowerCase().includes("perception") && 
-                        !limitation.toLowerCase().includes("status") && 
-                        !limitation.toLowerCase().includes("desired outcomes") && 
-                        !limitation.toLowerCase().includes("emotional")
-                      ) && (
-                        <div className="mt-3 pt-2 border-t border-border">
-                          <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
-                          <ul className="list-disc pl-5 mt-1">
-                            {result.analysis.limitations.filter(limitation => 
-                              (limitation.toLowerCase().includes("performance") || 
-                              limitation.toLowerCase().includes("measurable") || 
-                              limitation.toLowerCase().includes("quantitative")) && 
-                              !limitation.toLowerCase().includes("social") && 
-                              !limitation.toLowerCase().includes("perception") && 
-                              !limitation.toLowerCase().includes("status") && 
-                              !limitation.toLowerCase().includes("desired outcomes") && 
-                              !limitation.toLowerCase().includes("emotional")
-                            ).map((limitation, i) => (
-                              <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   ))}
-                  
-                  {/* Component Confidence Score */}
-                  <div className="bg-muted/40 p-3 rounded-md mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Performance Gains Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
-                            </ul>
-                          </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.analysis.performanceGainsConfidence || result.analysis.overallConfidence * 0.85)} className="cursor-help">
-                          {getConfidenceRange(result.analysis.performanceGainsConfidence || result.analysis.overallConfidence * 0.85)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in identifying quantifiable improvements the customer seeks. Lower confidence may indicate limited measurable data in the transcript.
-                    </p>
-                  </div>
                 </div>
               </div>
 
               {/* Social Gains */}
-              <div className="mt-6 pt-6 border-t">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Social Gains</h3>
-                  <BackdropTooltip
-                    content={
-                      <div className="max-w-sm p-2">
-                        <span>The positive social perceptions and status benefits customers want to achieve through how others see them while doing their job.</span>
-                      </div>
-                    }
-                    triggerClassName="cursor-help"
-                  >
-                    <svg className="w-5 h-5 text-muted-foreground hover:text-primary cursor-help" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 11h2v5m-2 0h4m-2.592-8.5h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </BackdropTooltip>
-                </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Social Gains</h3>
                 <div className="grid gap-4">
                   {result.socialGains.map((gain, index) => (
                     <div key={index} className="bg-secondary p-4 rounded-lg">
@@ -2131,6 +1671,9 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                           <h4 className="font-medium">{gain.gain}</h4>
                           <p className="text-sm text-muted-foreground">{gain.context}</p>
                         </div>
+                        <Badge variant={getConfidenceBadgeVariant(gain.confidence)}>
+                          {getConfidenceRange(gain.confidence)} Confidence
+                        </Badge>
                       </div>
                       {gain.analysis && (
                         <div className="mt-2 mb-2">
@@ -2146,53 +1689,8 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                           ))}
                         </ul>
                       </div>
-                      {result.analysis.limitations && result.analysis.limitations.some(limitation => 
-                        limitation.toLowerCase().includes("social") || 
-                        limitation.toLowerCase().includes("perception") || 
-                        limitation.toLowerCase().includes("status")
-                      ) && (
-                        <div className="mt-3 pt-2 border-t border-border">
-                          <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
-                          <ul className="list-disc pl-5 mt-1">
-                            {result.analysis.limitations.filter(limitation => 
-                              limitation.toLowerCase().includes("social") || 
-                              limitation.toLowerCase().includes("perception") || 
-                              limitation.toLowerCase().includes("status")
-                            ).map((limitation, i) => (
-                              <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   ))}
-                  
-                  {/* Component Confidence Score */}
-                  <div className="bg-muted/40 p-3 rounded-md mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Social Gains Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
-                            </ul>
-                          </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.analysis.socialGainsConfidence || result.analysis.overallConfidence * 0.75)} className="cursor-help">
-                          {getConfidenceRange(result.analysis.socialGainsConfidence || result.analysis.overallConfidence * 0.75)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in identifying social perception benefits. Lower confidence may suggest these were inferred rather than explicitly stated in the transcript.
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -2202,34 +1700,20 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   <h3 className="text-lg font-semibold">Analysis Summary</h3>
                   <p className="text-sm text-muted-foreground">{result.analysis.summary}</p>
                   
+                  {result.analysis.overallConfidence && (
+                    <div className="bg-secondary p-3 rounded-md">
+                      <h4 className="text-sm font-medium mb-1">Overall Confidence:</h4>
+                      <Badge variant={getConfidenceBadgeVariant(result.analysis.overallConfidence)}>
+                        {getConfidenceRange(result.analysis.overallConfidence)} Confidence
+                      </Badge>
+                    </div>
+                  )}
 
-
-                  {result.analysis.limitations && result.analysis.limitations.length > 0 && 
-                   !result.analysis.limitations.some(limitation => 
-                    limitation.toLowerCase().includes("desired outcomes") || 
-                    limitation.toLowerCase().includes("emotional") || 
-                    limitation.toLowerCase().includes("explicit detail") || 
-                    limitation.toLowerCase().includes("performance") || 
-                    limitation.toLowerCase().includes("measurable") || 
-                    limitation.toLowerCase().includes("quantitative") || 
-                    limitation.toLowerCase().includes("social") || 
-                    limitation.toLowerCase().includes("perception") || 
-                    limitation.toLowerCase().includes("status")
-                   ) && (
+                  {result.analysis.limitations && result.analysis.limitations.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium mb-2">General Limitations:</h4>
+                      <h4 className="text-sm font-medium mb-2">Limitations:</h4>
                       <ul className="list-disc pl-5 space-y-1">
-                        {result.analysis.limitations.filter(limitation => 
-                          !limitation.toLowerCase().includes("desired outcomes") && 
-                          !limitation.toLowerCase().includes("emotional") && 
-                          !limitation.toLowerCase().includes("explicit detail") && 
-                          !limitation.toLowerCase().includes("performance") && 
-                          !limitation.toLowerCase().includes("measurable") && 
-                          !limitation.toLowerCase().includes("quantitative") && 
-                          !limitation.toLowerCase().includes("social") && 
-                          !limitation.toLowerCase().includes("perception") && 
-                          !limitation.toLowerCase().includes("status")
-                        ).map((limitation, index) => (
+                        {result.analysis.limitations.map((limitation, index) => (
                           <li key={index} className="text-sm text-muted-foreground">{limitation}</li>
                         ))}
                       </ul>
@@ -2280,14 +1764,12 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                       </div>
                       <p className="text-muted-foreground mb-3">{item.analysis}</p>
                       <div className="space-y-2">
-                        <div className="evidence-section">
-                          <h5 className="text-sm font-medium mb-2">Evidence:</h5>
-                          <ul className="list-disc pl-5 space-y-1">
-                            {item.evidence.map((evidence, i) => (
-                              <li key={i} className="text-sm text-muted-foreground">{evidence}</li>
-                            ))}
-                          </ul>
-                        </div>
+                        <h5 className="text-sm font-medium">Evidence:</h5>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {item.evidence.map((evidence, i) => (
+                            <li key={i} className="text-sm text-muted-foreground">{evidence}</li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   ))}
@@ -2369,84 +1851,10 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
       }
     });
     
-    // Process badges for the downloaded HTML using our utility function
-    processBadgesForDownload(containerClone);
-    
     // Get the title for the report
     const title = showResult === 'longContextChunking' 
       ? 'Transcript Analysis' 
       : (showResult && agents.find(a => a.id === showResult)?.name) || 'Analysis Results';
-      
-    // Process the HTML to handle badges - this needs to be done in a specific way
-    // First create a temporary div to hold our content
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = containerClone.innerHTML;
-    
-    // Find all pain point cards
-    const cards = tempDiv.querySelectorAll('.bg-secondary.p-4.rounded-lg, .border.border-border.p-4.rounded-lg');
-    
-    cards.forEach(card => {
-      // Look for header sections that contain badge text
-      const headerSections = card.querySelectorAll('.flex.justify-between');
-      
-      headerSections.forEach(header => {
-        // Get all the text nodes in the header
-        const textElements = header.querySelectorAll('*');
-        
-        // Iterate through all elements to find one with severity text
-        for (let i = 0; i < textElements.length; i++) {
-          const element = textElements[i];
-          const text = element.textContent?.toLowerCase() || '';
-          
-          // If this text contains a severity label
-          if (text.includes('severity')) {
-            let severityType = '';
-            let severityColor = '';
-            let severityClass = '';
-            
-            // Determine which severity level it is
-            if (text.includes('critical')) {
-              severityType = 'Critical severity';
-              severityColor = '#F00D0D'; // New bright red
-              severityClass = 'badge-critical';
-            } else if (text.includes('high')) {
-              severityType = 'High severity';
-              severityColor = '#FE8C8C'; // New light red/pink
-              severityClass = 'badge-high';
-            } else if (text.includes('medium') || text.includes('moderate')) {
-              severityType = text.includes('medium') ? 'Medium severity' : 'Moderate severity';
-              severityColor = '#FFEE8C'; // New light yellow
-              severityClass = 'badge-medium';
-            } else if (text.includes('low')) {
-              severityType = 'Low severity';
-              severityColor = '#D5EAFF'; // New light blue
-              severityClass = 'badge-low';
-            } else if (text.includes('minimal')) {
-              severityType = 'Minimal severity';
-              severityColor = '#F0F7FF'; // New lighter blue
-              severityClass = 'badge-minimal';
-            }
-            
-            // If we found a valid severity, replace the element with our badge
-            if (severityType) {
-              // Create a HTML badge that matches our UI
-              const badgeHTML = `<span class="badge ${severityClass}">${severityType}</span>`;
-              
-              // Since we need to replace the whole parent that contains the React component
-              // Find the parent containing just this badge
-              let badgeContainer = element;
-              
-              // Replace with our HTML badge
-              badgeContainer.outerHTML = badgeHTML;
-              break; // Found and processed a badge, move to next header
-            }
-          }
-        }
-      });
-    });
-    
-    // Update our container clone with the processed content
-    containerClone.innerHTML = tempDiv.innerHTML;
     
     // Set the background color to #FAFAFA as specified
     const appBackgroundColor = '#FAFAFA';
@@ -2500,49 +1908,6 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
             color: #6b7280;
           }
           
-          /* Explicit badge styling for HTML export */
-          .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-            line-height: 1;
-            white-space: nowrap;
-          }
-          
-          .badge-critical {
-            background-color: #F00D0D !important; /* New bright red */
-            color: white !important;
-            border: none !important;
-          }
-          
-          .badge-high {
-            background-color: #FE8C8C !important; /* New light red/pink */
-            color: black !important;
-            border: none !important;
-          }
-          
-          .badge-medium, .badge-moderate {
-            background-color: #FFEE8C !important; /* New light yellow */
-            color: black !important;
-            border: none !important;
-          }
-          
-          .badge-low {
-            background-color: #D5EAFF !important; /* New light blue */
-            color: #1e40af !important;
-            border: none !important;
-          }
-          
-          .badge-minimal {
-            background-color: #F0F7FF !important; /* New lighter blue */
-            color: #1e40af !important;
-            border: none !important;
-          }
-          
           /* Override any problematic styles */
           button { display: none !important; }
           
@@ -2571,7 +1936,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   ${showResult === 'longContextChunking' 
                     ? 'The remaining analysis process uses this data as input which helps ensure the AI gives explicit and accurate results.'
                     : showResult === 'jtbd'
-                      ? 'Results from the transcript identifying what the customer is trying to accomplish.'
+                      ? 'Results from the transcript identifying the Jobs-to-be-Done (JTBD) goals mentioned by the interviewee.'
                       : 'Here are the detailed results of the analysis'
                   }
                 </p>
@@ -2591,11 +1956,8 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
       </html>
     `;
     
-    // Add confidence rubric to the footer
-    const htmlContentWithRubric = addConfidenceRubricToFooter(htmlContent);
-    
     // Create a blob with the HTML content
-    const blob = new Blob([htmlContentWithRubric], { type: 'text/html' });
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     
     // Create a download link and trigger it
@@ -2629,7 +1991,6 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
       case 'painExtractor':
         return renderPainResults(localAnalysisResults?.painExtractor);
       case 'frictionAnalysis':
-        // Pass the entire frictionAnalysis object to ensure we get primaryGoal and inferences
         return renderFrictionResults(localAnalysisResults?.frictionAnalysis);
       case 'problemAwareness':
         return renderProblemAwareness(localAnalysisResults?.problemAwareness);
@@ -2661,7 +2022,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
               {showResult === 'longContextChunking' 
                 ? 'The remaining analysis process uses this data as input which helps ensure the AI gives explicit and accurate results.'
                 : showResult === 'jtbd'
-                  ? 'Results from the transcript identifying what the customer is trying to accomplish.'
+                  ? 'Results from the transcript identifying the Jobs-to-be-Done (JTBD) goals mentioned by the interviewee.'
                   : 'Here are the detailed results of the analysis'
               }
             </p>

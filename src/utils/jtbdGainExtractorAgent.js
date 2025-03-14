@@ -50,7 +50,7 @@ export const processWithGainExtractor = async (chunkingResults, progressCallback
     console.log('Starting Gain Extraction analysis on preprocessed transcript');
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-16k",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -113,7 +113,8 @@ Remember: Output ONLY the JSON object - no other text or formatting.`
         }
       ],
       temperature: 0.5,
-      max_tokens: 2000
+      max_tokens: 2000,
+      response_format: { type: "json_object" }
     });
 
     // Update progress after main analysis

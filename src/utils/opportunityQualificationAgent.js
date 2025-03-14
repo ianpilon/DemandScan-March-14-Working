@@ -148,10 +148,11 @@ export const analyzeOpportunityQualification = async (analysisResults, progressC
 
     // Make the qualification analysis request
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o',
       messages,
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 2000,
+      response_format: { type: "json_object" }
     });
 
     // Clean up the response content to handle potential markdown formatting

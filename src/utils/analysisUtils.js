@@ -18,13 +18,14 @@ export const runAnalysis = async (agentId, transcript) => {
   try {
     console.log('Sending request to OpenAI API...');
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: "You are an expert transcript analyst." },
         { role: "user", content: prompt }
       ],
       temperature: 0.7,
       max_tokens: 1000,
+      response_format: { type: "json_object" }
     });
 
     console.log('Received response from OpenAI API');
