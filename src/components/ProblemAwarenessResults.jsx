@@ -73,10 +73,10 @@ const ProblemAwarenessResults = ({ result }) => {
                     <p className="text-muted-foreground mb-3">{item.analysis}</p>
                     <div className="space-y-2">
                       <div className="evidence-section">
-                        <h5 className="text-sm font-medium mb-2">Evidence:</h5>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
                         <ul className="list-disc pl-5 space-y-1">
                           {item.evidence.map((evidence, i) => (
-                            <li key={i} className="text-sm text-muted-foreground">{evidence}</li>
+                            <li key={i} className="text-sm text-muted-foreground italic">{evidence}</li>
                           ))}
                         </ul>
                       </div>

@@ -651,7 +651,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                       <span className="font-medium">Category:</span> {pain.category}
                     </p>
                     <p className="text-sm text-muted-foreground mb-2">
-                      <span className="font-medium">Evidence:</span> "{pain.evidence}"
+                      <span className="font-medium text-muted-foreground">Supporting Evidence:</span> "<span className="italic">{pain.evidence}</span>"
                     </p>
                     <p className="text-sm mb-2">
                       <span className="font-medium">Impact:</span> {pain.impact}
@@ -660,7 +660,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     {/* Display CURSE scores if available */}
                     {pain.curseScore && (
                       <div className="bg-[#FAFBFD] p-3 rounded-md mb-3 shadow-sm">
-                        <p className="text-sm">
+                        <p className="text-sm text-muted-foreground">
                           <BackdropTooltip
                             triggerClassName="font-medium underline decoration-dotted"
                             className="max-w-md text-xs bg-secondary"
@@ -898,7 +898,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   const { variant, className } = getSeverityBadgeStyles(severity);
                   
                   return (
-                    <div key={`friction-${index}`} style={{backgroundColor: '#f8f9fa'}} className="!bg-slate-50 p-3 rounded-md mb-3 shadow-sm">
+                    <div key={`friction-${index}`} className="bg-secondary p-3 rounded-md mb-3 shadow-sm">
                       <div className="flex justify-between items-start mb-3">
                         <h4 className="font-semibold">{friction.title}</h4>
                         <BackdropTooltip
@@ -944,7 +944,7 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm"><span className="font-medium">Impact:</span> {friction.impact}</p>
-                        <p className="text-sm text-muted-foreground"><span className="font-medium">Evidence:</span> {friction.evidence}</p>
+                        <p className="text-sm text-muted-foreground"><span className="font-medium text-muted-foreground">Supporting Evidence:</span> <span className="italic">{friction.evidence}</span></p>
                         
                         {friction.tags && friction.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
@@ -1286,8 +1286,8 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     )}
                     {need.evidence && (
                       <div className="mt-4">
-                        <h5 className="text-sm font-medium">Evidence:</h5>
-                        <p className="text-sm text-muted-foreground mt-1">{need.evidence}</p>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
+                        <p className="text-sm text-muted-foreground italic">{need.evidence}</p>
                       </div>
                     )}
                   </div>
@@ -1314,8 +1314,8 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     )}
                     {need.evidence && (
                       <div className="mt-4">
-                        <h5 className="text-sm font-medium">Evidence:</h5>
-                        <p className="text-sm text-muted-foreground mt-1">{need.evidence}</p>
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
+                        <p className="text-sm text-muted-foreground italic">{need.evidence}</p>
                       </div>
                     )}
                   </div>
@@ -1528,10 +1528,10 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     <h4 className="font-medium mb-2">Problem Experience</h4>
                     <p className="text-sm text-muted-foreground mb-2">{result.scores.problemExperience.analysis}</p>
                     <div className="space-y-1">
-                      <h5 className="text-sm font-medium">Evidence:</h5>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
                       <ul className="list-disc pl-5 space-y-1">
                         {result.scores.problemExperience.evidence.map((item, index) => (
-                          <li key={index} className="text-sm text-muted-foreground">{item}</li>
+                          <li key={index} className="text-sm text-muted-foreground italic">{item}</li>
                         ))}
                       </ul>
                     </div>
@@ -1541,10 +1541,10 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     <h4 className="font-medium mb-2">Active Search</h4>
                     <p className="text-sm text-muted-foreground mb-2">{result.scores.activeSearch.analysis}</p>
                     <div className="space-y-1">
-                      <h5 className="text-sm font-medium">Evidence:</h5>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
                       <ul className="list-disc pl-5 space-y-1">
                         {result.scores.activeSearch.evidence.map((item, index) => (
-                          <li key={index} className="text-sm text-muted-foreground">{item}</li>
+                          <li key={index} className="text-sm text-muted-foreground italic">{item}</li>
                         ))}
                       </ul>
                     </div>
@@ -1554,10 +1554,10 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                     <h4 className="font-medium mb-2">Problem Fit</h4>
                     <p className="text-sm text-muted-foreground mb-2">{result.scores.problemFit.analysis}</p>
                     <div className="space-y-1">
-                      <h5 className="text-sm font-medium">Evidence:</h5>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
                       <ul className="list-disc pl-5 space-y-1">
                         {result.scores.problemFit.evidence.map((item, index) => (
-                          <li key={index} className="text-sm text-muted-foreground">{item}</li>
+                          <li key={index} className="text-sm text-muted-foreground italic">{item}</li>
                         ))}
                       </ul>
                     </div>
@@ -1918,83 +1918,85 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   </BackdropTooltip>
                 </div>
                 <div className="grid gap-4">
-                  {result.desiredOutcomes.map((outcome, index) => (
-                    <div key={index} className="bg-secondary p-4 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium">{outcome.outcome}</h4>
+                  <div className="bg-secondary p-4 rounded-lg">
+                    {result.desiredOutcomes.map((outcome, index) => (
+                      <div key={index} className="mb-4 last:mb-0">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium">{outcome.outcome}</h4>
+                          </div>
                         </div>
-                      </div>
-                      {outcome.analysis && (
-                        <div className="mt-2 mb-3">
-                          <h5 className="text-sm font-medium">Analysis:</h5>
-                          <p className="text-sm text-muted-foreground">{outcome.analysis}</p>
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <h5 className="text-sm font-medium">Evidence:</h5>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">
-                          {outcome.evidence.map((item, i) => (
-                            <li key={i} className="text-sm text-muted-foreground">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      {result.analysis.limitations && result.analysis.limitations.some(limitation => 
-                        (limitation.toLowerCase().includes("desired outcomes") || 
-                        limitation.toLowerCase().includes("emotional")) && 
-                        !limitation.toLowerCase().includes("social") && 
-                        !limitation.toLowerCase().includes("perception") && 
-                        !limitation.toLowerCase().includes("status") && 
-                        !limitation.toLowerCase().includes("performance") && 
-                        !limitation.toLowerCase().includes("measurable") && 
-                        !limitation.toLowerCase().includes("quantitative")
-                      ) && (
-                        <div className="mt-3 pt-2 border-t border-border">
-                          <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
-                          <ul className="list-disc pl-5 mt-1">
-                            {result.analysis.limitations.filter(limitation => 
-                              (limitation.toLowerCase().includes("desired outcomes") || 
-                              limitation.toLowerCase().includes("emotional")) && 
-                              !limitation.toLowerCase().includes("social") && 
-                              !limitation.toLowerCase().includes("perception") && 
-                              !limitation.toLowerCase().includes("status") && 
-                              !limitation.toLowerCase().includes("performance") && 
-                              !limitation.toLowerCase().includes("measurable") && 
-                              !limitation.toLowerCase().includes("quantitative")
-                            ).map((limitation, i) => (
-                              <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
+                        {outcome.analysis && (
+                          <div className="mt-2 mb-3">
+                            <h5 className="text-sm font-medium">Analysis:</h5>
+                            <p className="text-sm text-muted-foreground">{outcome.analysis}</p>
+                          </div>
+                        )}
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {outcome.evidence.map((item, i) => (
+                              <li key={i} className="text-sm text-muted-foreground italic">{item}</li>
                             ))}
                           </ul>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {/* Component Confidence Score */}
-                  <div className="bg-muted/40 p-3 rounded-md mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Desired Outcomes Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
+                        {result.analysis.limitations && result.analysis.limitations.some(limitation => 
+                          (limitation.toLowerCase().includes("desired outcomes") || 
+                          limitation.toLowerCase().includes("emotional")) && 
+                          !limitation.toLowerCase().includes("social") && 
+                          !limitation.toLowerCase().includes("perception") && 
+                          !limitation.toLowerCase().includes("status") && 
+                          !limitation.toLowerCase().includes("performance") && 
+                          !limitation.toLowerCase().includes("measurable") && 
+                          !limitation.toLowerCase().includes("quantitative")
+                        ) && (
+                          <div className="mt-3 pt-2 border-t border-border">
+                            <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
+                            <ul className="list-disc pl-5 mt-1">
+                              {result.analysis.limitations.filter(limitation => 
+                                (limitation.toLowerCase().includes("desired outcomes") || 
+                                limitation.toLowerCase().includes("emotional")) && 
+                                !limitation.toLowerCase().includes("social") && 
+                                !limitation.toLowerCase().includes("perception") && 
+                                !limitation.toLowerCase().includes("status") && 
+                                !limitation.toLowerCase().includes("performance") && 
+                                !limitation.toLowerCase().includes("measurable") && 
+                                !limitation.toLowerCase().includes("quantitative")
+                              ).map((limitation, i) => (
+                                <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
+                              ))}
                             </ul>
                           </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.analysis.desiredOutcomesConfidence || result.analysis.overallConfidence * 0.9)} className="cursor-help">
-                          {getConfidenceRange(result.analysis.desiredOutcomesConfidence || result.analysis.overallConfidence * 0.9)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Component Confidence Score */}
+                    <div className="bg-[#FAFBFD] p-3 rounded-md mt-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-sm font-medium">Desired Outcomes Confidence:</h4>
+                        <BackdropTooltip
+                          content={
+                            <div className="max-w-sm p-2">
+                              <p className="font-medium mb-1">Confidence Score Rubric:</p>
+                              <ul className="list-disc pl-4 space-y-1">
+                                <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
+                                <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
+                                <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
+                              </ul>
+                            </div>
+                          }
+                          triggerClassName="cursor-help"
+                        >
+                          <Badge variant={getConfidenceBadgeVariant(result.analysis.desiredOutcomesConfidence || result.analysis.overallConfidence * 0.9)} className="cursor-help">
+                            {getConfidenceRange(result.analysis.desiredOutcomesConfidence || result.analysis.overallConfidence * 0.9)} Confidence
+                          </Badge>
+                        </BackdropTooltip>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Indicates confidence in correctly identifying the customer's desired outcomes. Low confidence may suggest further research is needed in this area.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in correctly identifying the customer's desired outcomes. Low confidence may suggest further research is needed in this area.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -2017,91 +2019,94 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   </BackdropTooltip>
                 </div>
                 <div className="grid gap-4">
-                  {result.performanceGains.map((gain, index) => (
-                    <div key={index} className="bg-secondary p-4 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium">{gain.gain}</h4>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
-                        <div>
-                          <span className="font-medium">Current State:</span>
-                          <p className="text-muted-foreground">{gain.currentState}</p>
+                  <div className="bg-secondary p-4 rounded-lg">
+                    {/* Render the individual Performance Gains */}
+                    {result.performanceGains.map((gain, index) => (
+                      <div key={index} className="mb-4 last:mb-0">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium">{gain.gain}</h4>
                         </div>
-                        <div>
-                          <span className="font-medium">Target State:</span>
-                          <p className="text-muted-foreground">{gain.targetState}</p>
+                        <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
+                          <div>
+                            <span className="font-medium">Current State:</span>
+                            <p className="text-muted-foreground">{gain.currentState}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium">Target State:</span>
+                            <p className="text-muted-foreground">{gain.targetState}</p>
+                          </div>
                         </div>
-                      </div>
-                      {gain.analysis && (
-                        <div className="mt-2 mb-2">
-                          <h5 className="text-sm font-medium">Analysis:</h5>
-                          <p className="text-sm text-muted-foreground">{gain.analysis}</p>
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <h5 className="text-sm font-medium">Evidence:</h5>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">
-                          {gain.evidence.map((item, i) => (
-                            <li key={i} className="text-sm text-muted-foreground">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      {result.analysis.limitations && result.analysis.limitations.some(limitation => 
-                        (limitation.toLowerCase().includes("performance") || 
-                        limitation.toLowerCase().includes("measurable") || 
-                        limitation.toLowerCase().includes("quantitative")) && 
-                        !limitation.toLowerCase().includes("social") && 
-                        !limitation.toLowerCase().includes("perception") && 
-                        !limitation.toLowerCase().includes("status") && 
-                        !limitation.toLowerCase().includes("desired outcomes") && 
-                        !limitation.toLowerCase().includes("emotional")
-                      ) && (
-                        <div className="mt-3 pt-2 border-t border-border">
-                          <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
-                          <ul className="list-disc pl-5 mt-1">
-                            {result.analysis.limitations.filter(limitation => 
-                              (limitation.toLowerCase().includes("performance") || 
-                              limitation.toLowerCase().includes("measurable") || 
-                              limitation.toLowerCase().includes("quantitative")) && 
-                              !limitation.toLowerCase().includes("social") && 
-                              !limitation.toLowerCase().includes("perception") && 
-                              !limitation.toLowerCase().includes("status") && 
-                              !limitation.toLowerCase().includes("desired outcomes") && 
-                              !limitation.toLowerCase().includes("emotional")
-                            ).map((limitation, i) => (
-                              <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
+                        {gain.analysis && (
+                          <div className="mt-2 mb-2">
+                            <h5 className="text-sm font-medium">Analysis:</h5>
+                            <p className="text-sm text-muted-foreground">{gain.analysis}</p>
+                          </div>
+                        )}
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {gain.evidence.map((item, i) => (
+                              <li key={i} className="text-sm text-muted-foreground italic">{item}</li>
                             ))}
                           </ul>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {/* Component Confidence Score */}
-                  <div className="bg-muted/40 p-3 rounded-md mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Performance Gains Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
+                        {result.analysis.limitations && result.analysis.limitations.some(limitation => 
+                          (limitation.toLowerCase().includes("performance") || 
+                          limitation.toLowerCase().includes("measurable") || 
+                          limitation.toLowerCase().includes("quantitative")) && 
+                          !limitation.toLowerCase().includes("social") && 
+                          !limitation.toLowerCase().includes("perception") && 
+                          !limitation.toLowerCase().includes("status") && 
+                          !limitation.toLowerCase().includes("desired outcomes") && 
+                          !limitation.toLowerCase().includes("emotional")
+                        ) && (
+                          <div className="mt-3 pt-2 border-t border-border">
+                            <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
+                            <ul className="list-disc pl-5 mt-1">
+                              {result.analysis.limitations.filter(limitation => 
+                                (limitation.toLowerCase().includes("performance") || 
+                                limitation.toLowerCase().includes("measurable") || 
+                                limitation.toLowerCase().includes("quantitative")) && 
+                                !limitation.toLowerCase().includes("social") && 
+                                !limitation.toLowerCase().includes("perception") && 
+                                !limitation.toLowerCase().includes("status") && 
+                                !limitation.toLowerCase().includes("desired outcomes") && 
+                                !limitation.toLowerCase().includes("emotional")
+                              ).map((limitation, i) => (
+                                <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
+                              ))}
                             </ul>
                           </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.analysis.performanceGainsConfidence || result.analysis.overallConfidence * 0.85)} className="cursor-help">
-                          {getConfidenceRange(result.analysis.performanceGainsConfidence || result.analysis.overallConfidence * 0.85)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Component Confidence Score - moved inside the parent bg-secondary div like Desired Outcomes */}
+                    <div className="bg-[#FAFBFD] p-3 rounded-md mt-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-sm font-medium">Performance Gains Confidence:</h4>
+                        <BackdropTooltip
+                          content={
+                            <div className="max-w-sm p-2">
+                              <p className="font-medium mb-1">Confidence Score Rubric:</p>
+                              <ul className="list-disc pl-4 space-y-1">
+                                <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
+                                <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
+                                <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
+                              </ul>
+                            </div>
+                          }
+                          triggerClassName="cursor-help"
+                        >
+                          <Badge variant={getConfidenceBadgeVariant(result.analysis.performanceGainsConfidence || result.analysis.overallConfidence * 0.85)} className="cursor-help">
+                            {getConfidenceRange(result.analysis.performanceGainsConfidence || result.analysis.overallConfidence * 0.85)} Confidence
+                          </Badge>
+                        </BackdropTooltip>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Indicates confidence in identifying quantifiable improvements the customer seeks. Lower confidence may indicate limited measurable data in the transcript.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in identifying quantifiable improvements the customer seeks. Lower confidence may indicate limited measurable data in the transcript.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -2124,74 +2129,76 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                   </BackdropTooltip>
                 </div>
                 <div className="grid gap-4">
-                  {result.socialGains.map((gain, index) => (
-                    <div key={index} className="bg-secondary p-4 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium">{gain.gain}</h4>
-                          <p className="text-sm text-muted-foreground">{gain.context}</p>
+                  <div className="bg-secondary p-4 rounded-lg">
+                    {result.socialGains.map((gain, index) => (
+                      <div key={index} className="mb-4 last:mb-0">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium">{gain.gain}</h4>
+                            <p className="text-sm text-muted-foreground">{gain.context}</p>
+                          </div>
                         </div>
-                      </div>
-                      {gain.analysis && (
-                        <div className="mt-2 mb-2">
-                          <h5 className="text-sm font-medium">Analysis:</h5>
-                          <p className="text-sm text-muted-foreground">{gain.analysis}</p>
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <h5 className="text-sm font-medium">Evidence:</h5>
-                        <ul className="list-disc pl-5 mt-1 space-y-1">
-                          {gain.evidence.map((item, i) => (
-                            <li key={i} className="text-sm text-muted-foreground">{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      {result.analysis.limitations && result.analysis.limitations.some(limitation => 
-                        limitation.toLowerCase().includes("social") || 
-                        limitation.toLowerCase().includes("perception") || 
-                        limitation.toLowerCase().includes("status")
-                      ) && (
-                        <div className="mt-3 pt-2 border-t border-border">
-                          <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
-                          <ul className="list-disc pl-5 mt-1">
-                            {result.analysis.limitations.filter(limitation => 
-                              limitation.toLowerCase().includes("social") || 
-                              limitation.toLowerCase().includes("perception") || 
-                              limitation.toLowerCase().includes("status")
-                            ).map((limitation, i) => (
-                              <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
+                        {gain.analysis && (
+                          <div className="mt-2 mb-2">
+                            <h5 className="text-sm font-medium">Analysis:</h5>
+                            <p className="text-sm text-muted-foreground">{gain.analysis}</p>
+                          </div>
+                        )}
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {gain.evidence.map((item, i) => (
+                              <li key={i} className="text-sm text-muted-foreground italic">{item}</li>
                             ))}
                           </ul>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {/* Component Confidence Score */}
-                  <div className="bg-muted/40 p-3 rounded-md mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-medium">Social Gains Confidence:</h4>
-                      <BackdropTooltip
-                        content={
-                          <div className="max-w-sm p-2">
-                            <p className="font-medium mb-1">Confidence Score Rubric:</p>
-                            <ul className="list-disc pl-4 space-y-1">
-                              <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
-                              <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
-                              <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
+                        {result.analysis.limitations && result.analysis.limitations.some(limitation => 
+                          limitation.toLowerCase().includes("social") || 
+                          limitation.toLowerCase().includes("perception") || 
+                          limitation.toLowerCase().includes("status")
+                        ) && (
+                          <div className="mt-3 pt-2 border-t border-border">
+                            <h5 className="text-sm font-medium text-muted-foreground">Note:</h5>
+                            <ul className="list-disc pl-5 mt-1">
+                              {result.analysis.limitations.filter(limitation => 
+                                limitation.toLowerCase().includes("social") || 
+                                limitation.toLowerCase().includes("perception") || 
+                                limitation.toLowerCase().includes("status")
+                              ).map((limitation, i) => (
+                                <li key={i} className="text-xs italic text-muted-foreground">{limitation}</li>
+                              ))}
                             </ul>
                           </div>
-                        }
-                        triggerClassName="cursor-help"
-                      >
-                        <Badge variant={getConfidenceBadgeVariant(result.analysis.socialGainsConfidence || result.analysis.overallConfidence * 0.75)} className="cursor-help">
-                          {getConfidenceRange(result.analysis.socialGainsConfidence || result.analysis.overallConfidence * 0.75)} Confidence
-                        </Badge>
-                      </BackdropTooltip>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Component Confidence Score - moved inside the parent bg-secondary div like Desired Outcomes */}
+                    <div className="bg-[#FAFBFD] p-3 rounded-md mt-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-sm font-medium">Social Gains Confidence:</h4>
+                        <BackdropTooltip
+                          content={
+                            <div className="max-w-sm p-2">
+                              <p className="font-medium mb-1">Confidence Score Rubric:</p>
+                              <ul className="list-disc pl-4 space-y-1">
+                                <li><span className="font-medium text-green-600">80-100%:</span> Strong evidence with explicit statements</li>
+                                <li><span className="font-medium text-amber-600">60-79%:</span> Moderate evidence with some inference</li>
+                                <li><span className="font-medium text-red-600">0-59%:</span> Limited evidence requiring significant inference</li>
+                              </ul>
+                            </div>
+                          }
+                          triggerClassName="cursor-help"
+                        >
+                          <Badge variant={getConfidenceBadgeVariant(result.analysis.socialGainsConfidence || result.analysis.overallConfidence * 0.75)} className="cursor-help">
+                            {getConfidenceRange(result.analysis.socialGainsConfidence || result.analysis.overallConfidence * 0.75)} Confidence
+                          </Badge>
+                        </BackdropTooltip>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Indicates confidence in identifying social perception benefits. Lower confidence may suggest these were inferred rather than explicitly stated in the transcript.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Indicates confidence in identifying social perception benefits. Lower confidence may suggest these were inferred rather than explicitly stated in the transcript.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -2281,10 +2288,10 @@ const AnalysisResults = ({ showResult, localAnalysisResults, longContextResults,
                       <p className="text-muted-foreground mb-3">{item.analysis}</p>
                       <div className="space-y-2">
                         <div className="evidence-section">
-                          <h5 className="text-sm font-medium mb-2">Evidence:</h5>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Supporting Evidence:</p>
                           <ul className="list-disc pl-5 space-y-1">
                             {item.evidence.map((evidence, i) => (
-                              <li key={i} className="text-sm text-muted-foreground">{evidence}</li>
+                              <li key={i} className="text-sm text-muted-foreground italic">{evidence}</li>
                             ))}
                           </ul>
                         </div>
